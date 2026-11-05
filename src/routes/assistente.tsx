@@ -16,7 +16,7 @@ function Assistente() {
   return (
     <div className="mx-auto flex h-full max-w-4xl flex-col px-6 py-8 sm:py-10 animate-fade-in">
       <div className="mb-6">
-        <BackButton to="/" label="Início" />
+        <BackButton to="/painel" label="Início" />
       </div>
 
       <div className="mb-6">

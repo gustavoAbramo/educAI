@@ -204,7 +204,7 @@ function NovaAula() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-8 sm:py-10 animate-fade-in">
       <div className="mb-6">
-        <BackButton to="/" label="Início" />
+        <BackButton to="/painel" label="Início" />
       </div>
 
       <div className="mb-7">

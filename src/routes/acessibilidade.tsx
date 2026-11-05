@@ -75,7 +75,7 @@ function Acessibilidade() {
   return (
     <div className="mx-auto flex max-w-4xl flex-col px-6 py-8 sm:py-10 animate-fade-in">
       <div className="mb-6">
-        <BackButton to="/" label="Início" />
+        <BackButton to="/painel" label="Início" />
       </div>
 
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">

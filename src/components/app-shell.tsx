@@ -83,7 +83,7 @@ export function AppShell() {
             shortcut: "Ctrl K",
             onSelect: () => setSearchOpen(true),
           },
-          { id: "inicio", title: "Início", icon: LayoutDashboard, to: "/" },
+          { id: "inicio", title: "Início", icon: LayoutDashboard, to: "/painel" },
           { id: "nova-aula", title: "Nova aula", icon: Mic, to: "/nova-aula" },
           { id: "historico", title: "Histórico", icon: History, to: "/historico" },
         ],
@@ -118,7 +118,7 @@ export function AppShell() {
   const brand = (
     <div className={cn("mb-2 flex items-center py-2", collapsed ? "justify-center" : "gap-3 px-2")}>
       <Link
-        to="/"
+        to="/painel"
         title={collapsed ? "educAI" : undefined}
         aria-label={collapsed ? "educAI" : undefined}
         className="flex min-w-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"

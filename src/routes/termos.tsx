@@ -79,7 +79,7 @@ function Termos() {
       <header className="border-b border-[#0b0b0c]/10">
         <div className="mx-auto flex h-20 w-full max-w-[820px] items-center justify-between px-6 sm:px-10">
           <Link
-            to="/landing"
+            to="/"
             aria-label="educAI, início"
             className="flex items-center gap-3 text-[17px] font-semibold tracking-[-.02em]"
           >
@@ -89,7 +89,7 @@ function Termos() {
             educAI
           </Link>
           <Link
-            to="/landing"
+            to="/"
             className="inline-flex items-center gap-2 text-[14px] font-medium underline-offset-4 hover:underline"
           >
             <ArrowLeft size={16} aria-hidden /> Voltar

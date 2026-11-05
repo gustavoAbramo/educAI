@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as ResultadoRouteImport } from './routes/resultado'
 import { Route as ProcessandoRouteImport } from './routes/processando'
+import { Route as PainelRouteImport } from './routes/painel'
 import { Route as NovaAulaRouteImport } from './routes/nova-aula'
 import { Route as LandingRouteImport } from './routes/landing'
 import { Route as HistoricoRouteImport } from './routes/historico'
@@ -34,6 +35,11 @@ const ResultadoRoute = ResultadoRouteImport.update({
 const ProcessandoRoute = ProcessandoRouteImport.update({
   id: '/processando',
   path: '/processando',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PainelRoute = PainelRouteImport.update({
+  id: '/painel',
+  path: '/painel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NovaAulaRoute = NovaAulaRouteImport.update({
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/historico': typeof HistoricoRoute
   '/landing': typeof LandingRoute
   '/nova-aula': typeof NovaAulaRoute
+  '/painel': typeof PainelRoute
   '/processando': typeof ProcessandoRoute
   '/resultado': typeof ResultadoRoute
   '/termos': typeof TermosRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/historico': typeof HistoricoRoute
   '/landing': typeof LandingRoute
   '/nova-aula': typeof NovaAulaRoute
+  '/painel': typeof PainelRoute
   '/processando': typeof ProcessandoRoute
   '/resultado': typeof ResultadoRoute
   '/termos': typeof TermosRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/historico': typeof HistoricoRoute
   '/landing': typeof LandingRoute
   '/nova-aula': typeof NovaAulaRoute
+  '/painel': typeof PainelRoute
   '/processando': typeof ProcessandoRoute
   '/resultado': typeof ResultadoRoute
   '/termos': typeof TermosRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/historico'
     | '/landing'
     | '/nova-aula'
+    | '/painel'
     | '/processando'
     | '/resultado'
     | '/termos'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/historico'
     | '/landing'
     | '/nova-aula'
+    | '/painel'
     | '/processando'
     | '/resultado'
     | '/termos'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/historico'
     | '/landing'
     | '/nova-aula'
+    | '/painel'
     | '/processando'
     | '/resultado'
     | '/termos'
@@ -168,6 +180,7 @@ export interface RootRouteChildren {
   HistoricoRoute: typeof HistoricoRoute
   LandingRoute: typeof LandingRoute
   NovaAulaRoute: typeof NovaAulaRoute
+  PainelRoute: typeof PainelRoute
   ProcessandoRoute: typeof ProcessandoRoute
   ResultadoRoute: typeof ResultadoRoute
   TermosRoute: typeof TermosRoute
@@ -194,6 +207,13 @@ declare module '@tanstack/react-router' {
       path: '/processando'
       fullPath: '/processando'
       preLoaderRoute: typeof ProcessandoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/painel': {
+      id: '/painel'
+      path: '/painel'
+      fullPath: '/painel'
+      preLoaderRoute: typeof PainelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/nova-aula': {
@@ -264,6 +284,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoricoRoute: HistoricoRoute,
   LandingRoute: LandingRoute,
   NovaAulaRoute: NovaAulaRoute,
+  PainelRoute: PainelRoute,
   ProcessandoRoute: ProcessandoRoute,
   ResultadoRoute: ResultadoRoute,
   TermosRoute: TermosRoute,

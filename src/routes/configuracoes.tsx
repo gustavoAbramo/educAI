@@ -1054,7 +1054,7 @@ function Configuracoes() {
   return (
     <div className="mx-auto max-w-6xl px-6 py-8 animate-fade-in sm:py-10">
       <div className="mb-6">
-        <BackButton to="/" label="Início" />
+        <BackButton to="/painel" label="Início" />
       </div>
 
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
