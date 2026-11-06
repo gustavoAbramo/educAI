@@ -1,12 +1,12 @@
 import { redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest, setResponseHeader } from "@tanstack/react-start/server";
-import { getWorkspaceSession } from "@/server/auth";
+import { canManageSettings, getWorkspaceSession } from "@/server/auth";
 
 export const checkWorkspaceSession = createServerFn().handler(() => {
   setResponseHeader("cache-control", "no-store");
   const session = getWorkspaceSession(getRequest());
-  return session && { canManageSettings: session.isAdmin };
+  return session && { canManageSettings: canManageSettings(session) };
 });
 
 export function validateAuthSearch(search: Record<string, unknown>) {

@@ -19,7 +19,7 @@ import type {
   UpdateSessionRequest,
 } from "@/lib/voice-intelligence";
 import { getFasterWhisperConnectionStatus } from "./faster-whisper-provider";
-import type { WorkspaceSession } from "./auth";
+import { canManageSettings, type WorkspaceSession } from "./auth";
 import { persistRecordingUpload, type PendingRecordingUpload } from "./local-recordings";
 import { getOllamaConnectionStatus } from "./ollama-provider";
 import { answerAssistantMessage, type AssistantRespondRequest } from "./assistant-service";
@@ -717,7 +717,7 @@ export async function handleVoiceApiRequest(
       route.parts.length === 2 &&
       route.parts[1] === "audio-defaults" &&
       request.method === "GET";
-    if (isSettings && session?.isAdmin === false && !isVoiceDefaults) {
+    if (isSettings && session && !canManageSettings(session) && !isVoiceDefaults) {
       throw new ApiError(
         403,
         "ADMIN_REQUIRED",

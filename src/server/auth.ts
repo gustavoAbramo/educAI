@@ -30,6 +30,14 @@ export type WorkspaceSession =
   | { isAdmin: true; ownerId?: never }
   | { isAdmin: false; ownerId: string };
 
+// No `npm run dev` (servidor local, preso a localhost) qualquer conta logada
+// configura os provedores de IA. Em build de produção, so a administração.
+const isLocalDev = (import.meta as { env?: { DEV?: boolean } }).env?.DEV === true;
+
+export function canManageSettings(session: WorkspaceSession) {
+  return session.isAdmin || isLocalDev;
+}
+
 function authConfig() {
   const secret = authSecret();
   if (!secret) return null;
