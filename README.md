@@ -135,8 +135,9 @@ if (-not $env:EDUCAI_AUTH_JWT_SECRET) {
 npm run dev
 ```
 
-Abra `http://localhost:5173/cadastro`, ou acesse **Cadastre-se** na tela de
-login. Cada pessoa cria sua conta com e-mail e senha e entra automaticamente.
+Abra `http://localhost:8080/cadastro`, ou acesse **Cadastre-se** em
+`http://localhost:8080/login`. Cada pessoa cria sua conta com e-mail e senha
+e entra automaticamente.
 O cookie de sessão dura quatro horas. A aplicação salva os hashes das senhas
 em `.data/accounts/` por padrão. Mantenha esse diretório fora de `public/`.
 Para servidores sem disco persistente, use
@@ -172,8 +173,7 @@ console.log(`scrypt:${salt.toString("hex")}:${hash.toString("hex")}`);
 }
 ```
 
-Frontend e API sobem juntos. Se a porta padrão estiver ocupada, use o endereço
-exibido pelo Vite.
+Frontend e API sobem juntos na porta 8080.
 
 ## 6. Conferir se está funcionando
 
@@ -251,7 +251,7 @@ Apagar a pasta `.data/` zera o app. Para sincronizar sessões com o Supabase, ve
 | Sintoma | Causa provável e solução |
 | --- | --- |
 | `npm` bloqueado no PowerShell | política de execução; use `npm.cmd` no lugar de `npm` |
-| App abre em porta diferente de 5173 | a porta estava ocupada; use a que o terminal mostrou |
+| A porta 8080 está ocupada | encerre o processo que está usando a porta antes de iniciar o educAI |
 | Erro de transcrição indisponível | provider selecionado sem chave, ou worker Faster-Whisper parado/em modo `mock`; confira **Configurações** |
 | Materiais ou chat falham com Ollama | Ollama não está rodando ou o modelo não foi baixado (`ollama pull qwen3:8b`) |
 | Variável de ambiente "não pegou" | `$env:` só vale na janela onde foi definida; defina e rode `npm run dev` no mesmo terminal |

@@ -30,6 +30,9 @@ const privateFiles = [
 export default defineConfig({
   vite: {
     server: {
+      host: "localhost",
+      port: 8080,
+      strictPort: true,
       fs: {
         deny: [
           ".env",

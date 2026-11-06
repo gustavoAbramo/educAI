@@ -3,7 +3,7 @@
   display: grid;
   min-height: 100svh;
   place-items: center;
-  padding: clamp(18px, 4svh, 36px) 36px;
+  padding: clamp(18px, 4svh, 36px) clamp(16px, 3vw, 36px);
   background: #b7b7b7;
   color: #141414;
   font-family: "Aptos", "Segoe UI", sans-serif;
@@ -21,7 +21,7 @@
   display: grid;
   grid-template-rows: auto 1fr auto;
   justify-items: center;
-  padding: 36px 32px 25px;
+  padding: 36px clamp(20px, 3vw, 32px) 25px;
 }
 
 .login-brand {
@@ -194,10 +194,10 @@
 }
 
 .login-art {
-  background: #3d3d3d url("/login-garden.webp") center / cover no-repeat;
+  background: #10123d url("/aula-em-materiais.svg") center / contain no-repeat;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 640px) {
   .login-page {
     padding: 0;
     background: #fff;
