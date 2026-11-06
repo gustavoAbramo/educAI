@@ -125,15 +125,13 @@ Detalhes do contrato e da diarização em
 
 ## 5. Subir o app
 
-Defina uma chave JWT no terminal e inicie o app. Se já tiver uma chave
-configurada, reutilize o mesmo valor.
-
 ```powershell
-if (-not $env:EDUCAI_AUTH_JWT_SECRET) {
-    $env:EDUCAI_AUTH_JWT_SECRET = node -p 'require("node:crypto").randomBytes(32).toString("hex")'
-}
 npm run dev
 ```
+
+Na primeira vez que alguém entra ou se cadastra, o servidor gera a chave das
+sessões e a salva em `.data/auth-secret`. Para usar uma chave sua, por exemplo
+em produção, defina `EDUCAI_AUTH_JWT_SECRET` no ambiente do servidor.
 
 Abra `http://localhost:8080/cadastro`, ou acesse **Cadastre-se** em
 `http://localhost:8080/login`. Cada pessoa cria sua conta com e-mail e senha
@@ -203,14 +201,15 @@ Para gravar reuniões do Meet/Teams, siga
 
 ## 8. Variáveis de ambiente
 
-`EDUCAI_AUTH_JWT_SECRET` é necessária para entrar e criar contas. As demais dependem
-da configuração do servidor.
+Nenhuma variável é obrigatória para entrar e criar contas. As variáveis abaixo
+ajustam a configuração do servidor.
 
 | Variável | Padrão | Descrição |
 | --- | --- | --- |
 | `EDUCAI_AUTH_EMAIL` | — | e-mail reservado para a conta de administração |
 | `EDUCAI_AUTH_PASSWORD_HASH` | — | hash scrypt da conta de administração |
-| `EDUCAI_AUTH_JWT_SECRET` | — | chave de 32 bytes em hexadecimal |
+| `EDUCAI_AUTH_JWT_SECRET` | gerada em `.data/auth-secret` | chave de 32 bytes em hexadecimal |
+| `EDUCAI_AUTH_SECRET_FILE` | `.data/auth-secret` | onde salvar a chave gerada automaticamente |
 | `EDUCAI_AUTH_STORE` | `local` | `local` ou `supabase` para guardar contas |
 | `EDUCAI_AUTH_ACCOUNTS_DIR` | `.data/accounts/` | diretório persistente quando as contas são locais |
 | `OPENAI_API_KEY` | — | chave da OpenAI |

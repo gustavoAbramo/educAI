@@ -1,0 +1,180 @@
+educAI — Resumo do projeto para apresentação
+============================================
+
+VISÃO GERAL
+-----------
+O educAI é uma aplicação web com inteligência artificial para registrar aulas, reuniões, mentorias, treinamentos, consultorias, workshops e apresentações. A partir de uma gravação ou arquivo de áudio, o sistema organiza a sessão, gera uma transcrição e transforma o conteúdo em materiais consultáveis. Também oferece assistência contextual durante a sessão e chat sobre o conteúdo registrado.
+
+Problema que busca resolver: muito conteúdo importante fica preso em gravações longas e é trabalhoso revisar, localizar decisões ou transformar uma conversa em material de estudo e ações práticas.
+
+Proposta de valor: converter áudio em informação organizada e reutilizável, mantendo o vínculo entre a sessão, a transcrição, os materiais e as perguntas feitas à IA.
+
+PÚBLICO E CENÁRIOS DE USO
+-------------------------
+- Estudantes e professores: registrar aulas, revisar tópicos e estudar com perguntas e respostas.
+- Mentores e mentorados: guardar sessões e acompanhar recomendações e próximos passos.
+- Equipes: documentar reuniões, treinamentos e workshops.
+- Consultores e profissionais comerciais: rever atendimentos, apresentações e calls.
+- Outros usos de conversa falada: o tipo de sessão pode ser configurado como outro.
+
+FLUXO PRINCIPAL
+---------------
+1. O usuário cria uma sessão e informa título, tipo, idioma e contexto/objetivos opcionais.
+2. Grava o áudio no navegador ou envia um arquivo de áudio.
+3. Durante a gravação, o navegador pode exibir uma prévia local de fala reconhecida e sinais heurísticos.
+4. Ao finalizar, o áudio é enviado à API do projeto.
+5. O provider configurado realiza a transcrição oficial.
+6. A aplicação gera materiais com base na transcrição e no contexto informado.
+7. O usuário consulta, edita e revisa transcrição e materiais, conversa com o assistente e acompanha a sessão no histórico.
+
+O fluxo técnico pode ser resumido como:
+Sessão -> áudio -> transcrição -> materiais -> chat/assistente -> visão consolidada.
+
+FUNCIONALIDADES PRESENTES NO CÓDIGO
+-----------------------------------
+- Criação e configuração de sessões de vários tipos, como aula, mentoria, reunião, treinamento, workshop, consultoria, call comercial e apresentação.
+- Gravação de áudio no navegador e envio de arquivo de áudio.
+- Prévia de transcrição ao vivo pela Web Speech API quando compatível com o navegador. É uma ajuda visual e não substitui a transcrição oficial do áudio final.
+- Indicadores locais durante a gravação, como termos técnicos detectados, pontos captados e alertas heurísticos. Esses indicadores não são uma avaliação definitiva da IA.
+- Transcrição final segmentada, com possibilidade de revisar o texto e os falantes.
+- Geração de resumo, tópicos, relatório/insights, mapa mental, perguntas e respostas e itens de ação.
+- Contexto da sessão — tema, público, nível, objetivos e instruções — pode orientar a geração.
+- Chat contextual associado à sessão.
+- Assistente contextual ao vivo, com modos Aluno e Mentor, perguntas sugeridas ou livres e interação por voz quando o navegador oferece suporte.
+- Histórico de sessões com status, busca e filtros.
+- Tela de resultado com visão executiva, transcrição, relatório, materiais de estudo e conversas salvas.
+- Exportação consolidada em Markdown.
+- Tela de configurações para visualizar e configurar providers e verificar sua disponibilidade.
+- Interface de termos de uso e informações de privacidade.
+
+STACK E TECNOLOGIAS
+-------------------
+Frontend e aplicação:
+- TypeScript e React 19.
+- TanStack Start e TanStack Router para aplicação, renderização no servidor e rotas.
+- Vite 7 como ferramenta de desenvolvimento e build.
+- Tailwind CSS 4 para estilos.
+- Componentes acessíveis baseados em Radix UI e componentes próprios.
+- React Query para gerenciamento de consultas de dados.
+- React Hook Form e Zod para formulários e validação.
+- Recharts para gráficos; GSAP para animações; Lucide React para ícones.
+
+Backend e API:
+- API HTTP integrada ao servidor da aplicação TanStack Start.
+- API V1 em /api/v1, com contrato documentado e estável.
+- Serviços separados para sessões, áudio, transcrição, materiais, chat e configurações.
+- Integração de build com Cloudflare via plugin Vite e configuração Wrangler. Isso não significa que o projeto já esteja publicado na Cloudflare.
+
+IA e áudio:
+- OpenAI: provider externo para transcrição e geração, conforme modelos configurados.
+- Google Gemini: provider externo para transcrição e geração.
+- Ollama: execução local de modelos para geração de materiais e chat; o README indica qwen3:8b como modelo padrão.
+- Faster-Whisper: opção de transcrição local por meio de um worker HTTP. O repositório inclui o worker/ponte, mas não inclui automaticamente um serviço/modelo real Faster-Whisper instalado.
+- Web Speech API: prévia de fala no navegador e recursos de reconhecimento/síntese de voz, sujeitos ao suporte do browser.
+- Providers simulados: disponíveis para desenvolvimento e testes controlados, não como resultados reais.
+
+Persistência e ferramentas:
+- Armazenamento local padrão em arquivos dentro de .data/; inclui sessões, gravações e configurações.
+- Supabase é uma opção de persistência configurável, não uma dependência obrigatória do modo local.
+- Node.js (README recomenda Node 22 LTS, mínimo 20.19) e npm para instalar e executar.
+- Testes com o runner nativo de Node.js; TypeScript, ESLint e Prettier para desenvolvimento.
+- Git e GitHub para controle de versão e colaboração.
+- Lovable aparece no histórico/infraestrutura de configuração do projeto e como dependência de build Vite. Não é preciso ter conta na Lovable para instalar dependências e executar o código localmente.
+
+COMO A IA É CONFIGURADA
+-----------------------
+O sistema separa as capacidades de transcrição e geração. Pode usar OpenAI ou Gemini com chave de API, ou serviços locais como Ollama e Faster-Whisper. As chaves podem ser fornecidas por variáveis de ambiente ou cadastradas na tela de configurações. Sem credenciais nem serviços locais, é possível abrir e conhecer as telas, mas os recursos que dependem de IA real podem ficar indisponíveis. O modo simulado serve para demonstrações técnicas controladas e deve ser identificado como simulado.
+
+ARQUITETURA EM UMA FRASE
+------------------------
+Uma aplicação web React/TypeScript conversa com uma API local integrada ao servidor; a API armazena sessões, gravações e resultados, escolhe providers de IA configurados e devolve dados para as telas de histórico, gravação e resultado.
+
+API E MODELO DE DADOS
+---------------------
+A API V1 organiza o domínio em sessões, áudio, transcrição, materiais, mensagens de chat e status de processamento. Entre as operações documentadas estão:
+- criar/listar/consultar sessões e obter visão consolidada;
+- enviar e listar áudio;
+- consultar status e iniciar transcrição;
+- consultar e editar transcrição;
+- gerar e consultar materiais;
+- enviar e consultar mensagens de chat.
+
+Os status representam o progresso, por exemplo: CREATED, AUDIO_UPLOADED, TRANSCRIBING, TRANSCRIBED, GENERATING_MATERIALS, READY ou FAILED. A API documenta tipos de sessão, materiais e respostas de erro para integração futura com outros clientes, como uma plataforma web.
+
+DADOS, PRIVACIDADE E LIMITES
+----------------------------
+- Por padrão, os dados são salvos localmente em .data/ e não exigem uma conta Supabase.
+- A gravação pode permanecer local no computador, mas o processamento com OpenAI ou Gemini envia áudio/texto ao serviço externo escolhido. A tela de termos informa essa possibilidade.
+- Chaves cadastradas pelo app são armazenadas criptografadas no ambiente local segundo a documentação do projeto.
+- Existe limite padrão documentado de 500 MiB para upload de áudio.
+- O projeto aplica validações de endpoint, limites e timeouts para providers e worker local.
+- A transcrição, separação de falantes e geração podem conter erros; os resultados devem ser revisados.
+- A prévia ao vivo e alguns indicadores são estimativas do navegador, não a análise final.
+- A diarização/identificação de falantes depende da qualidade do áudio e do provider; canais estimados não garantem quem falou.
+- Exportação PDF é indicada na documentação como ainda não implementada; há exportação Markdown.
+- A documentação técnica lista autenticação/autorização da API, observabilidade e armazenamento multi-processo como pontos a tratar antes de uma operação pública/produção.
+
+COMO EXECUTAR LOCALMENTE
+------------------------
+Pré-requisito: Node.js 22 LTS (mínimo 20.19) e npm. No PowerShell, na pasta do projeto:
+
+    npm.cmd install
+    npm.cmd run dev
+
+Abrir no navegador o endereço informado pelo Vite, normalmente http://localhost:5173. O app e a API sobem juntos. Para testar telas sem serviços de IA, habilitar o modo simulado conforme o README; para transcrição e geração reais, configurar um provider e suas credenciais/serviços. Conta Lovable não é requisito para executar.
+
+ESTRUTURA RELEVANTE DO REPOSITÓRIO
+----------------------------------
+- src/routes/: telas e rotas da aplicação, como aula, nova aula, histórico, processamento, resultado, assistente e configurações.
+- src/components/: componentes de interface reutilizáveis e assistente contextual.
+- src/services/: comunicação do frontend com a API.
+- src/server/: API, pipeline de áudio, providers, persistência, configurações e geração de materiais.
+- src/lib/: lógica compartilhada, conhecimento do assistente, prévia ao vivo, acessibilidade e formatação.
+- src/types/api.ts: tipos usados no contrato da API.
+- workers/faster-whisper-local/: worker HTTP e bridges para integração de transcrição local.
+- agents/: arquivos de instrução/conhecimento organizados por tema; não representam necessariamente agentes autônomos em execução.
+- docs/: contrato da API, operação, arquitetura, persistência e decisões técnicas.
+
+QUALIDADES QUE PODEM SER DESTACADAS
+-----------------------------------
+- Fluxo ponta a ponta, do áudio ao material de revisão.
+- Uso amplo além de aulas: reuniões, mentorias e treinamentos também são cenários previstos.
+- Contextualização da geração por metadados da sessão.
+- Várias opções de provider, incluindo alternativas locais e em nuvem.
+- API V1 documentada para permitir integração de outros clientes.
+- Histórico persistente e possibilidade de corrigir a transcrição.
+- Clareza sobre estado e disponibilidade dos providers, em vez de tratar uma falha como resultado real.
+
+PONTOS IMPORTANTES PARA UMA APRESENTAÇÃO HONESTA
+------------------------------------------------
+- O projeto é uma aplicação em desenvolvimento; a presença de uma integração não significa que credenciais, banco ou serviços externos estejam configurados nesta cópia.
+- Transcrição e IA reais exigem configuração de provider. O modo simulado não deve ser apresentado como inteligência artificial real.
+- Supabase é opcional e o padrão atual documentado é armazenamento local.
+- O projeto contém configuração de build para Cloudflare, mas isso não comprova implantação em produção.
+- A prévia ao vivo usa recursos do navegador e não é a transcrição final.
+- PDF não está implementado segundo o contexto técnico; Markdown é o formato de exportação disponível.
+- Antes de apresentar uma demonstração, verificar as configurações dos providers e usar uma gravação de teste sem dados pessoais/sensíveis.
+
+ROTEIRO SUGERIDO DE SLIDES
+--------------------------
+1. O problema: gravações extensas são difíceis de revisar e transformar em ações.
+2. A solução educAI: áudio convertido em transcrição, conhecimento organizado e assistência contextual.
+3. Público e cenários: aulas, mentorias, reuniões, treinamentos e consultorias.
+4. Demonstração do fluxo: criar sessão, gravar/enviar áudio, processar e consultar resultados.
+5. Funcionalidades: transcrição, resumo, tópicos, relatório, mapa mental, perguntas, ações e chat.
+6. Como funciona por dentro: frontend, API V1, pipeline e providers de IA.
+7. Stack e ferramentas: React, TypeScript, TanStack, Vite, Tailwind, Node.js e providers.
+8. Dados e privacidade: persistência local por padrão e opção de serviços externos/Supabase.
+9. Limitações e próximos passos: autenticação, produção, exportação PDF e revisão humana.
+10. Encerramento: valor esperado — economizar tempo e tornar conversas mais fáceis de estudar e acompanhar.
+
+FONTES INTERNAS CONSULTADAS
+---------------------------
+- README.md — instalação, configuração de providers e execução.
+- package.json — scripts e dependências.
+- AI_CONTEXT.md — visão do produto e decisões de fluxo.
+- docs/api.md — endpoints e contrato V1.
+- docs/runtime-hardening.md — confiabilidade e limitações operacionais.
+- docs/supabase-persistence.md — configuração opcional de persistência Supabase.
+- docs/meeting-audio-checklist.md — captura de áudio de reuniões.
+- src/routes/ e src/server/ — funcionalidades e implementação presentes no código.

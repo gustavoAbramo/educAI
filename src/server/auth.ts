@@ -6,6 +6,7 @@ import {
   passwordProblem,
 } from "../lib/password-policy";
 import { findAuthAccount, insertAuthAccount } from "./auth-accounts";
+import { authSecret } from "./auth-secret";
 import { serverEnv } from "./runtime-env";
 
 const lifetimeSeconds = 4 * 60 * 60;
@@ -30,8 +31,8 @@ export type WorkspaceSession =
   | { isAdmin: false; ownerId: string };
 
 function authConfig() {
-  const secret = serverEnv("EDUCAI_AUTH_JWT_SECRET") ?? "";
-  if (!/^[\da-f]{64}$/i.test(secret)) return null;
+  const secret = authSecret();
+  if (!secret) return null;
 
   const key = Buffer.from(secret, "hex");
   const email = serverEnv("EDUCAI_AUTH_EMAIL")?.trim().toLowerCase();
@@ -222,7 +223,7 @@ export async function handleAuthRequest(request: Request, url: URL) {
     return authError(
       503,
       "AUTH_NOT_CONFIGURED",
-      "O acesso ainda precisa ser configurado no servidor.",
+      "A chave EDUCAI_AUTH_JWT_SECRET é inválida: use 64 caracteres hexadecimais.",
     );
   }
 
