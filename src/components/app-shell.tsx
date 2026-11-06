@@ -25,7 +25,7 @@ import {
   SidebarNav,
   SidebarSearch,
 } from "@/components/ui/dashboard-sidebar";
-import { applyAccessibilityPrefs, loadAccessibilityPrefs } from "@/lib/accessibility";
+import { screenTitle } from "@/lib/route-access";
 import { cn } from "@/lib/utils";
 
 const bottomItems: NavItemData[] = [
@@ -85,7 +85,14 @@ export function AppShell() {
   const collapsed = desktop && !sidebarOpen;
 
   useEffect(() => setMobileNav(false), [pathname]);
-  useEffect(() => applyAccessibilityPrefs(loadAccessibilityPrefs()), []);
+  useEffect(() => {
+    if (!mobileNav) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileNav(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [mobileNav]);
 
   const groups = useMemo<NavGroupData[]>(
     () => [
@@ -119,15 +126,7 @@ export function AppShell() {
     [],
   );
 
-  const navTitle = [...groups.flatMap((group) => group.items), ...bottomItems].find(
-    (item) => item.to === pathname,
-  )?.title;
-  const titleByPath: Record<string, string> = {
-    "/aula": "Aula em andamento",
-    "/resultado": "Resultado da sessão",
-    "/processando": "Processando aula",
-  };
-  const contextTitle = titleByPath[pathname] ?? navTitle ?? "educAI";
+  const contextTitle = screenTitle(pathname) ?? "educAI";
   const isRecording = pathname === "/aula";
 
   const brand = (
@@ -186,6 +185,7 @@ export function AppShell() {
           collapsed ? "w-[65px]" : "w-[260px]",
         )}
         inert={!desktop && !mobileNav ? true : undefined}
+        aria-label="Menu principal"
       >
         <SidebarNav
           collapsed={collapsed}
@@ -202,6 +202,7 @@ export function AppShell() {
             onClick={() => setMobileNav(true)}
             className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground md:hidden dark:hover:bg-white/5"
             aria-label="Abrir menu"
+            aria-expanded={mobileNav}
           >
             <Menu className="h-[18px] w-[18px]" strokeWidth={1.5} />
           </button>
@@ -218,11 +219,18 @@ export function AppShell() {
             )}
           </button>
 
-          <div className="flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground">
+          <nav
+            aria-label="Você está em"
+            className="flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground"
+          >
             <span className="hidden truncate sm:inline">educAI</span>
-            <span className="hidden sm:inline">/</span>
-            <span className="truncate font-medium text-foreground">{contextTitle}</span>
-          </div>
+            <span className="hidden sm:inline" aria-hidden>
+              /
+            </span>
+            <span className="truncate font-medium text-foreground" aria-current="page">
+              {contextTitle}
+            </span>
+          </nav>
 
           {isRecording ? (
             <div className="hidden h-8 items-center gap-2 rounded-full border border-destructive/20 bg-destructive/10 px-3 text-xs font-medium text-destructive animate-fade-in sm:flex">
@@ -244,7 +252,8 @@ export function AppShell() {
             <button
               onClick={toggle}
               className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5"
-              aria-label="Alternar tema"
+              aria-label="Tema escuro"
+              aria-pressed={dark}
             >
               {dark ? (
                 <Sun className="h-4 w-4" strokeWidth={1.5} />

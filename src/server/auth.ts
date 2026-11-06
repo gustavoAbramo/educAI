@@ -1,6 +1,12 @@
 import { createHmac, randomBytes, randomUUID, scrypt, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
+import {
+  maximumPasswordLength,
+  minimumPasswordLength,
+  passwordProblem,
+} from "../lib/password-policy";
 import { findAuthAccount, insertAuthAccount } from "./auth-accounts";
+import { authSecret } from "./auth-secret";
 import { serverEnv } from "./runtime-env";
 
 const lifetimeSeconds = 4 * 60 * 60;
@@ -9,13 +15,12 @@ const scryptOptions = { N: 2 ** 15, r: 8, p: 3, maxmem: 48 * 1024 * 1024 };
 const jwtHeader = Buffer.from('{"alg":"HS256","typ":"JWT"}').toString("base64url");
 const passwordHashPattern = /^scrypt:[\da-f]{32}:[\da-f]{64}$/i;
 const memberId = z.string().uuid();
-const minimumPasswordLength = 12;
 const loginInput = z.object({
   email: z.string().trim().email().max(254).toLowerCase(),
-  password: z.string().min(1).max(256),
+  password: z.string().min(1).max(maximumPasswordLength),
 });
 const registerInput = loginInput.extend({
-  password: z.string().min(minimumPasswordLength).max(256),
+  password: z.string().min(minimumPasswordLength).max(maximumPasswordLength),
 });
 const attemptsByEmail = new Map<string, number>();
 let attemptWindowEnd = 0;
@@ -26,8 +31,8 @@ export type WorkspaceSession =
   | { isAdmin: false; ownerId: string };
 
 function authConfig() {
-  const secret = serverEnv("EDUCAI_AUTH_JWT_SECRET") ?? "";
-  if (!/^[\da-f]{64}$/i.test(secret)) return null;
+  const secret = authSecret();
+  if (!secret) return null;
 
   const key = Buffer.from(secret, "hex");
   const email = serverEnv("EDUCAI_AUTH_EMAIL")?.trim().toLowerCase();
@@ -218,7 +223,7 @@ export async function handleAuthRequest(request: Request, url: URL) {
     return authError(
       503,
       "AUTH_NOT_CONFIGURED",
-      "O acesso ainda precisa ser configurado no servidor.",
+      "A chave EDUCAI_AUTH_JWT_SECRET é inválida: use 64 caracteres hexadecimais.",
     );
   }
 
@@ -240,6 +245,10 @@ export async function handleAuthRequest(request: Request, url: URL) {
   }
 
   const { email, password } = input.data;
+  const weakness = registering ? passwordProblem(password, email) : undefined;
+  if (weakness) {
+    return authError(400, "WEAK_PASSWORD", `Senha fraca: ${weakness.label.toLowerCase()}.`);
+  }
   const now = Date.now();
   if (now >= attemptWindowEnd) {
     attemptWindowEnd = now + attemptWindowMs;
