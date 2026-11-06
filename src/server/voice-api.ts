@@ -19,6 +19,7 @@ import type {
   UpdateSessionRequest,
 } from "@/lib/voice-intelligence";
 import { getFasterWhisperConnectionStatus } from "./faster-whisper-provider";
+import type { WorkspaceSession } from "./auth";
 import { persistRecordingUpload, type PendingRecordingUpload } from "./local-recordings";
 import { getOllamaConnectionStatus } from "./ollama-provider";
 import { answerAssistantMessage, type AssistantRespondRequest } from "./assistant-service";
@@ -35,6 +36,7 @@ import {
 import { serverEnv } from "./runtime-env";
 import {
   getAppSettingsCenter,
+  getAppVoiceDefaults,
   updateAppSettingsCenter,
   validateAppSettingsCenter,
 } from "./settings-center";
@@ -505,12 +507,12 @@ function parseRoute(pathname: string): RouteMatch | null {
   return { parts };
 }
 
-function requireSession(sessionId: string | undefined): SessionRecord {
+function requireSession(sessionId: string | undefined, ownerId?: string): SessionRecord {
   if (!sessionId) {
     throw new ApiError(400, "SESSION_ID_REQUIRED", "A session id is required.");
   }
 
-  const record = getVoiceSession(sessionId);
+  const record = getVoiceSession(sessionId, ownerId);
   if (!record) {
     throw new ApiError(404, "SESSION_NOT_FOUND", "Session not found.");
   }
@@ -522,13 +524,13 @@ function sessionStatus(record: SessionRecord) {
   return record.status;
 }
 
-async function handleSessions(request: Request, route: RouteMatch, path: string) {
+async function handleSessions(request: Request, route: RouteMatch, ownerId?: string) {
   const [, sessionId, resource, resourceId] = route.parts;
 
   if (!sessionId) {
     if (request.method === "GET") {
       return json({
-        data: listVoiceSessions().map((record) => ({
+        data: listVoiceSessions(ownerId).map((record) => ({
           ...record.session,
           audioCount: record.recordings.length,
           hasTranscript: Boolean(record.transcript),
@@ -540,17 +542,20 @@ async function handleSessions(request: Request, route: RouteMatch, path: string)
     if (request.method === "POST") {
       const body = await readJson<Partial<CreateSessionRequest>>(request);
       const validated = validateSessionInput(body);
-      const created = await createVoiceSession({
-        ...body,
-        ...validated,
-        participants: body.participants ?? [],
-        metadata: body.metadata ?? {},
-      });
+      const created = await createVoiceSession(
+        {
+          ...body,
+          ...validated,
+          participants: body.participants ?? [],
+          metadata: body.metadata ?? {},
+        },
+        ownerId,
+      );
       return json({ data: created.session }, { status: 201 });
     }
   }
 
-  const record = requireSession(sessionId);
+  const record = requireSession(sessionId, ownerId);
 
   if (!resource && request.method === "GET") {
     return json({ data: record.session });
@@ -693,7 +698,10 @@ async function handleSessions(request: Request, route: RouteMatch, path: string)
   throw new ApiError(405, "METHOD_NOT_ALLOWED", "Method or endpoint not allowed.");
 }
 
-export async function handleVoiceApiRequest(request: Request): Promise<Response | null> {
+export async function handleVoiceApiRequest(
+  request: Request,
+  session?: WorkspaceSession,
+): Promise<Response | null> {
   const url = new URL(request.url);
   const route = parseRoute(url.pathname);
   if (!route) return null;
@@ -703,6 +711,20 @@ export async function handleVoiceApiRequest(request: Request): Promise<Response 
   }
 
   try {
+    const isSettings = route.parts[0] === "settings";
+    const isVoiceDefaults =
+      isSettings &&
+      route.parts.length === 2 &&
+      route.parts[1] === "audio-defaults" &&
+      request.method === "GET";
+    if (isSettings && session?.isAdmin === false && !isVoiceDefaults) {
+      throw new ApiError(
+        403,
+        "ADMIN_REQUIRED",
+        "As configurações do servidor exigem uma conta de administração.",
+      );
+    }
+
     await ensureAppSettingsLoaded();
     await ensureSettingsSecretsLoaded();
     await ensureVoiceStoreLoaded();
@@ -719,8 +741,10 @@ export async function handleVoiceApiRequest(request: Request): Promise<Response 
     }
 
     if (route.parts[0] === "sessions") {
-      return await handleSessions(request, route, url.pathname);
+      return await handleSessions(request, route, session?.ownerId);
     }
+
+    if (isVoiceDefaults) return json({ data: getAppVoiceDefaults() });
 
     if (route.parts[0] === "settings" && route.parts[1] === "status" && request.method === "GET") {
       return json({ data: await validateAppSettingsCenter() });

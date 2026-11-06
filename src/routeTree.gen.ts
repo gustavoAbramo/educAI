@@ -14,9 +14,11 @@ import { Route as ResultadoRouteImport } from './routes/resultado'
 import { Route as ProcessandoRouteImport } from './routes/processando'
 import { Route as PainelRouteImport } from './routes/painel'
 import { Route as NovaAulaRouteImport } from './routes/nova-aula'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as LandingRouteImport } from './routes/landing'
 import { Route as HistoricoRouteImport } from './routes/historico'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AulaRouteImport } from './routes/aula'
 import { Route as AssistenteRouteImport } from './routes/assistente'
 import { Route as AcessibilidadeRouteImport } from './routes/acessibilidade'
@@ -47,6 +49,11 @@ const NovaAulaRoute = NovaAulaRouteImport.update({
   path: '/nova-aula',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LandingRoute = LandingRouteImport.update({
   id: '/landing',
   path: '/landing',
@@ -60,6 +67,11 @@ const HistoricoRoute = HistoricoRouteImport.update({
 const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
   id: '/configuracoes',
   path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CadastroRoute = CadastroRouteImport.update({
+  id: '/cadastro',
+  path: '/cadastro',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AulaRoute = AulaRouteImport.update({
@@ -88,9 +100,11 @@ export interface FileRoutesByFullPath {
   '/acessibilidade': typeof AcessibilidadeRoute
   '/assistente': typeof AssistenteRoute
   '/aula': typeof AulaRoute
+  '/cadastro': typeof CadastroRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/historico': typeof HistoricoRoute
   '/landing': typeof LandingRoute
+  '/login': typeof LoginRoute
   '/nova-aula': typeof NovaAulaRoute
   '/painel': typeof PainelRoute
   '/processando': typeof ProcessandoRoute
@@ -102,9 +116,11 @@ export interface FileRoutesByTo {
   '/acessibilidade': typeof AcessibilidadeRoute
   '/assistente': typeof AssistenteRoute
   '/aula': typeof AulaRoute
+  '/cadastro': typeof CadastroRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/historico': typeof HistoricoRoute
   '/landing': typeof LandingRoute
+  '/login': typeof LoginRoute
   '/nova-aula': typeof NovaAulaRoute
   '/painel': typeof PainelRoute
   '/processando': typeof ProcessandoRoute
@@ -117,9 +133,11 @@ export interface FileRoutesById {
   '/acessibilidade': typeof AcessibilidadeRoute
   '/assistente': typeof AssistenteRoute
   '/aula': typeof AulaRoute
+  '/cadastro': typeof CadastroRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/historico': typeof HistoricoRoute
   '/landing': typeof LandingRoute
+  '/login': typeof LoginRoute
   '/nova-aula': typeof NovaAulaRoute
   '/painel': typeof PainelRoute
   '/processando': typeof ProcessandoRoute
@@ -133,9 +151,11 @@ export interface FileRouteTypes {
     | '/acessibilidade'
     | '/assistente'
     | '/aula'
+    | '/cadastro'
     | '/configuracoes'
     | '/historico'
     | '/landing'
+    | '/login'
     | '/nova-aula'
     | '/painel'
     | '/processando'
@@ -147,9 +167,11 @@ export interface FileRouteTypes {
     | '/acessibilidade'
     | '/assistente'
     | '/aula'
+    | '/cadastro'
     | '/configuracoes'
     | '/historico'
     | '/landing'
+    | '/login'
     | '/nova-aula'
     | '/painel'
     | '/processando'
@@ -161,9 +183,11 @@ export interface FileRouteTypes {
     | '/acessibilidade'
     | '/assistente'
     | '/aula'
+    | '/cadastro'
     | '/configuracoes'
     | '/historico'
     | '/landing'
+    | '/login'
     | '/nova-aula'
     | '/painel'
     | '/processando'
@@ -176,9 +200,11 @@ export interface RootRouteChildren {
   AcessibilidadeRoute: typeof AcessibilidadeRoute
   AssistenteRoute: typeof AssistenteRoute
   AulaRoute: typeof AulaRoute
+  CadastroRoute: typeof CadastroRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   HistoricoRoute: typeof HistoricoRoute
   LandingRoute: typeof LandingRoute
+  LoginRoute: typeof LoginRoute
   NovaAulaRoute: typeof NovaAulaRoute
   PainelRoute: typeof PainelRoute
   ProcessandoRoute: typeof ProcessandoRoute
@@ -223,6 +249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NovaAulaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/landing': {
       id: '/landing'
       path: '/landing'
@@ -242,6 +275,13 @@ declare module '@tanstack/react-router' {
       path: '/configuracoes'
       fullPath: '/configuracoes'
       preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cadastro': {
+      id: '/cadastro'
+      path: '/cadastro'
+      fullPath: '/cadastro'
+      preLoaderRoute: typeof CadastroRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/aula': {
@@ -280,9 +320,11 @@ const rootRouteChildren: RootRouteChildren = {
   AcessibilidadeRoute: AcessibilidadeRoute,
   AssistenteRoute: AssistenteRoute,
   AulaRoute: AulaRoute,
+  CadastroRoute: CadastroRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   HistoricoRoute: HistoricoRoute,
   LandingRoute: LandingRoute,
+  LoginRoute: LoginRoute,
   NovaAulaRoute: NovaAulaRoute,
   PainelRoute: PainelRoute,
   ProcessandoRoute: ProcessandoRoute,

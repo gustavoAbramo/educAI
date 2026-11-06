@@ -460,6 +460,7 @@ export type SessionProcessingStatus = {
 };
 
 export type SessionRecord = {
+  ownerId?: string;
   session: VoiceSession;
   recordings: VoiceRecording[];
   transcript?: VoiceTranscript;

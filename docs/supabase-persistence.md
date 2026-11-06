@@ -30,8 +30,26 @@ alter table public.educai_voice_store enable row level security;
 revoke all on table public.educai_voice_store from anon, authenticated;
 ```
 
-O backend usa `service_role`, que bypassa RLS no servidor. Por isso nao crie politicas publicas
-para esta tabela enquanto nao houver modelo de usuarios/autenticacao no produto.
+O backend usa `service_role` e aplica as permissões de cada conta antes de retornar as aulas.
+Mantenha esta tabela restrita ao servidor.
+
+## Contas de usuário
+
+Para guardar as contas no Supabase, defina `EDUCAI_AUTH_STORE=supabase`, `SUPABASE_URL`
+e `SUPABASE_SECRET_KEY` ou `SUPABASE_SERVICE_ROLE_KEY` no ambiente do servidor. A seleção
+desse armazenamento é independente do provedor usado para guardar aulas.
+
+```sql
+create table if not exists public.educai_accounts (
+  id uuid primary key,
+  email text not null unique,
+  password_hash text not null
+);
+
+alter table public.educai_accounts enable row level security;
+revoke all on table public.educai_accounts from anon, authenticated;
+grant select, insert on table public.educai_accounts to service_role;
+```
 
 ## Como ativar
 

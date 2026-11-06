@@ -39,7 +39,6 @@ import {
   type LiveAssistantMessage,
   type LiveAssistantMode,
 } from "@/lib/live-assistant";
-import type { AppSettingsCenterEnvelope } from "@/lib/voice-intelligence";
 import {
   cancelSpeak,
   getSpeechRecognition,
@@ -912,15 +911,9 @@ function Aula() {
 
     const loadAudioSettings = async () => {
       try {
-        const response = await fetch("/api/v1/settings");
-        const payload = (await response.json()) as { data?: AppSettingsCenterEnvelope };
-        const voice = payload.data?.values.voice;
-        if (!active || !voice) return;
-        setLessonAudioSettings({
-          captureMode: voice.captureMode,
-          diarizationMode: voice.diarizationMode,
-          preserveSourceTracks: voice.preserveSourceTracks,
-        });
+        const response = await fetch("/api/v1/settings/audio-defaults");
+        const payload = (await response.json()) as { data?: LessonAudioSettings };
+        if (active && payload.data) setLessonAudioSettings(payload.data);
       } catch (error) {
         console.warn("[educAI] configuracoes de audio indisponiveis", error);
       }

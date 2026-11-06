@@ -4,6 +4,7 @@ import {
   GraduationCap,
   History,
   LayoutDashboard,
+  LogOut,
   Menu,
   Mic,
   Moon,
@@ -16,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Tooltip } from "@/components/tooltip";
 import {
   type NavGroupData,
@@ -57,6 +59,19 @@ export function AppShell() {
   const [mobileNav, setMobileNav] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function signOut() {
+    setSigningOut(true);
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) throw new Error("Logout failed");
+      window.location.replace("/login");
+    } catch {
+      toast.error("Não foi possível sair. Tente novamente.");
+      setSigningOut(false);
+    }
+  }
 
   // A rail so existe no desktop; no celular a sidebar e uma gaveta sempre expandida.
   const [desktop, setDesktop] = useState(true);
@@ -236,6 +251,17 @@ export function AppShell() {
               ) : (
                 <Moon className="h-4 w-4" strokeWidth={1.5} />
               )}
+            </button>
+          </Tooltip>
+          <Tooltip label="Sair da conta">
+            <button
+              type="button"
+              onClick={signOut}
+              disabled={signingOut}
+              aria-label="Sair da conta"
+              className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground disabled:opacity-50 dark:hover:bg-white/5"
+            >
+              <LogOut className="h-4 w-4" strokeWidth={1.5} aria-hidden />
             </button>
           </Tooltip>
         </header>

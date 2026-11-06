@@ -5,15 +5,22 @@ import {
   Outlet,
   Scripts,
   createRootRouteWithContext,
+  redirect,
   useRouter,
   useRouterState,
 } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { ConsentBanner } from "@/components/consent-banner";
 import { Toaster } from "@/components/ui/sonner";
+import { checkWorkspaceSession } from "@/lib/auth-session";
 import appCss from "../styles.css?url";
 
-const fullScreenPaths = ["/", "/termos"];
+const authPaths = new Set(["/login", "/cadastro"]);
+const publicPaths = new Set(["/", "/landing", "/termos", ...authPaths]);
+
+function isPublicPath(pathname: string) {
+  return publicPaths.has(pathname.replace(/\/+$/, "") || "/");
+}
 
 function NotFoundComponent() {
   return (
@@ -65,6 +72,19 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  beforeLoad: async ({ location }) => {
+    if (isPublicPath(location.pathname)) return { canManageSettings: false };
+    const session = await checkWorkspaceSession();
+    if (!session) {
+      throw redirect({
+        to: "/login",
+        search: { voltar: location.href },
+        replace: true,
+        headers: { "cache-control": "no-store" },
+      });
+    }
+    return session;
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -106,15 +126,17 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  // A landing e os termos ocupam a tela inteira, sem a sidebar e o cabecalho do app.
   const isFullScreen = useRouterState({
-    select: (state) => fullScreenPaths.includes(state.location.pathname),
+    select: (state) => isPublicPath(state.location.pathname),
+  });
+  const isAuthPage = useRouterState({
+    select: (state) => authPaths.has(state.location.pathname.replace(/\/+$/, "")),
   });
 
   return (
     <QueryClientProvider client={queryClient}>
       {isFullScreen ? <Outlet /> : <AppShell />}
-      <ConsentBanner />
+      {!isAuthPage && <ConsentBanner />}
       <Toaster position="bottom-right" />
     </QueryClientProvider>
   );

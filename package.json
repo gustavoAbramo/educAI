@@ -11,7 +11,7 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "test": "npm run test:providers && npm run test:storage && npm run test:assistant && npm run test:faster-whisper-worker && npm run test:faster-whisper-bridge && npm run test:api",
-    "test:api": "node --import tsx --test src/server/voice-api.integration.test.ts",
+    "test:api": "node --import tsx --test src/server/auth.integration.test.ts src/server/voice-api.integration.test.ts",
     "test:assistant": "node --import tsx --test src/lib/assistant-knowledge.test.ts src/lib/live-assistant.test.ts src/server/assistant-service.test.ts",
     "test:providers": "node --import tsx --test src/server/provider-http.test.ts src/server/provider-endpoint.test.ts",
     "test:storage": "node --import tsx --test src/server/local-recordings.test.ts",

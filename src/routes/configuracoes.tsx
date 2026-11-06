@@ -38,7 +38,29 @@ import type {
   TranscriptionProviderMode,
 } from "@/lib/voice-intelligence";
 
-export const Route = createFileRoute("/configuracoes")({ component: Configuracoes });
+export const Route = createFileRoute("/configuracoes")({ component: SettingsPage });
+
+function SettingsPage() {
+  const { canManageSettings } = Route.useRouteContext();
+  if (canManageSettings) return <Configuracoes />;
+
+  return (
+    <section className="mx-auto max-w-2xl space-y-4 px-5 py-10">
+      <h1 className="text-2xl font-semibold tracking-tight">Configurações</h1>
+      <p className="text-sm text-muted-foreground">
+        A administração do educAI gerencia os provedores de IA e o armazenamento. Você pode ajustar
+        as preferências de acessibilidade neste navegador.
+      </p>
+      <Link
+        to="/acessibilidade"
+        className="inline-flex items-center gap-2 text-sm font-medium underline underline-offset-4"
+      >
+        <Accessibility size={16} aria-hidden />
+        Preferências de acessibilidade
+      </Link>
+    </section>
+  );
+}
 
 const selectClassName =
   "rounded-lg border border-input bg-background px-3 h-9 w-full min-w-0 max-w-full truncate text-sm outline-none focus:ring-2 focus:ring-ring/40 hover:border-ring/50 transition";

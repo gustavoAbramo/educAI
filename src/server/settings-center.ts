@@ -108,6 +108,10 @@ function buildValues(): AppSettingsValues {
   };
 }
 
+export function getAppVoiceDefaults() {
+  return buildValues().voice;
+}
+
 function buildCategories(values: AppSettingsValues): AppSettingsCategory[] {
   const openAIReady = secretConfigured("OPENAI_API_KEY");
   const geminiReady = secretConfigured("GEMINI_API_KEY");

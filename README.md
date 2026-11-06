@@ -125,20 +125,60 @@ Detalhes do contrato e da diarização em
 
 ## 5. Subir o app
 
+Defina uma chave JWT no terminal e inicie o app. Se já tiver uma chave
+configurada, reutilize o mesmo valor.
+
 ```powershell
+if (-not $env:EDUCAI_AUTH_JWT_SECRET) {
+    $env:EDUCAI_AUTH_JWT_SECRET = node -p 'require("node:crypto").randomBytes(32).toString("hex")'
+}
 npm run dev
 ```
 
-Abra o endereço que aparecer no terminal (normalmente `http://localhost:5173`).
-Se a porta estiver ocupada, o Vite escolhe outra e mostra qual.
+Abra `http://localhost:5173/cadastro`, ou acesse **Cadastre-se** na tela de
+login. Cada pessoa cria sua conta com e-mail e senha e entra automaticamente.
+O cookie de sessão dura quatro horas. A aplicação salva os hashes das senhas
+em `.data/accounts/` por padrão. Mantenha esse diretório fora de `public/`.
+Para servidores sem disco persistente, use
+o [armazenamento de contas no Supabase](docs/supabase-persistence.md#contas-de-usuário).
+Guarde a chave JWT no ambiente do servidor para manter as sessões entre
+reinícios e use HTTPS em produção.
 
-Frontend e API sobem juntos no mesmo processo; a API fica em `/api/v1` no mesmo
-host e porta.
+### Conta de administração (opcional)
+
+Se você já configurou `EDUCAI_AUTH_EMAIL` e `EDUCAI_AUTH_PASSWORD_HASH`, continue
+usando essas credenciais. Essa conta administra os provedores e mantém o
+acesso às aulas existentes que ainda não têm um dono. Para configurá-la do
+zero, rode os comandos abaixo antes de iniciar o app.
+
+```powershell
+$env:EDUCAI_AUTH_EMAIL = Read-Host 'E-mail da conta'
+$senha = Read-Host 'Senha da conta' -AsSecureString
+$env:EDUCAI_AUTH_SETUP_PASSWORD = [System.Net.NetworkCredential]::new('', $senha).Password
+try {
+    $env:EDUCAI_AUTH_PASSWORD_HASH = @'
+const { randomBytes, scryptSync } = require("node:crypto");
+const password = process.env.EDUCAI_AUTH_SETUP_PASSWORD;
+if (!password || password.length > 256) throw new Error("Informe uma senha de 1 a 256 caracteres.");
+const salt = randomBytes(16);
+const hash = scryptSync(password, salt, 32, {
+  N: 2 ** 15, r: 8, p: 3, maxmem: 48 * 1024 * 1024,
+});
+console.log(`scrypt:${salt.toString("hex")}:${hash.toString("hex")}`);
+'@ | node
+} finally {
+    Remove-Item Env:EDUCAI_AUTH_SETUP_PASSWORD
+    $senha.Dispose()
+}
+```
+
+Frontend e API sobem juntos. Se a porta padrão estiver ocupada, use o endereço
+exibido pelo Vite.
 
 ## 6. Conferir se está funcionando
 
-1. Abra **Configurações** e veja o status dos providers (transcrição, materiais,
-   chat e assistente).
+1. Entre com sua conta ou cadastre-se. A conta de administração pode conferir
+   os provedores em **Configurações**.
 2. Vá em **Nova aula**, crie uma sessão e permita o microfone.
 3. Grave alguns segundos e finalize.
 4. Aguarde a tela de processamento chegar ao resultado, com transcrição e
@@ -163,10 +203,16 @@ Para gravar reuniões do Meet/Teams, siga
 
 ## 8. Variáveis de ambiente
 
-Todas são opcionais.
+`EDUCAI_AUTH_JWT_SECRET` é necessária para entrar e criar contas. As demais dependem
+da configuração do servidor.
 
 | Variável | Padrão | Descrição |
 | --- | --- | --- |
+| `EDUCAI_AUTH_EMAIL` | — | e-mail reservado para a conta de administração |
+| `EDUCAI_AUTH_PASSWORD_HASH` | — | hash scrypt da conta de administração |
+| `EDUCAI_AUTH_JWT_SECRET` | — | chave de 32 bytes em hexadecimal |
+| `EDUCAI_AUTH_STORE` | `local` | `local` ou `supabase` para guardar contas |
+| `EDUCAI_AUTH_ACCOUNTS_DIR` | `.data/accounts/` | diretório persistente quando as contas são locais |
 | `OPENAI_API_KEY` | — | chave da OpenAI |
 | `GEMINI_API_KEY` | — | chave do Gemini |
 | `EDUCAI_TRANSCRIPTION_PROVIDER` | automático | `mock`, `openai`, `gemini` ou `faster-whisper` |
@@ -185,7 +231,7 @@ Todas são opcionais.
 | `EDUCAI_ALLOW_REMOTE_LOCAL_PROVIDERS` | `false` | permite Ollama/Faster-Whisper fora da rede local |
 | `EDUCAI_PERSISTENCE_PROVIDER` | `local` | `local` ou `supabase` |
 | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | — | usados quando a persistência é `supabase` |
-| `VITE_EDUCAI_API_BASE_URL` | `/api/v1` | aponta o frontend para outra API |
+| `VITE_EDUCAI_API_BASE_URL` | `/api/v1` | endereço da API na mesma origem do frontend para receber o cookie de sessão |
 
 ## 9. Onde os dados ficam
 

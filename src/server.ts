@@ -2,6 +2,13 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import {
+  authRequired,
+  forbiddenOrigin,
+  getWorkspaceSession,
+  handleAuthRequest,
+  isSameOrigin,
+} from "./server/auth";
 import { setServerRuntimeEnv } from "./server/runtime-env";
 import { handleVoiceApiRequest } from "./server/voice-api";
 
@@ -10,6 +17,9 @@ type ServerEntry = {
 };
 
 let serverEntryPromise: Promise<ServerEntry> | undefined;
+
+const publicApiPaths = new Set(["/api/v1", "/api/v1/", "/api/v1/health", "/api/v1/health/"]);
+const readMethods = new Set(["GET", "HEAD", "OPTIONS"]);
 
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
@@ -72,8 +82,23 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       setServerRuntimeEnv(env);
-      const apiResponse = await handleVoiceApiRequest(request);
-      if (apiResponse) return apiResponse;
+      const url = new URL(request.url);
+      if (url.pathname.startsWith("/api/auth/")) return await handleAuthRequest(request, url);
+
+      const privateApi = url.pathname.startsWith("/api/v1") && !publicApiPaths.has(url.pathname);
+      const session = privateApi ? getWorkspaceSession(request) : null;
+      if (privateApi && !session) return authRequired();
+      if (privateApi && !readMethods.has(request.method) && !isSameOrigin(request)) {
+        return forbiddenOrigin();
+      }
+      const apiResponse = await handleVoiceApiRequest(request, session ?? undefined);
+      if (apiResponse) {
+        if (privateApi) {
+          apiResponse.headers.set("cache-control", "no-store");
+          apiResponse.headers.delete("access-control-allow-origin");
+        }
+        return apiResponse;
+      }
 
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

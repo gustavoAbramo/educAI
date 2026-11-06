@@ -197,7 +197,7 @@ export async function ensureVoiceStoreLoaded() {
   await loadPromise;
 }
 
-function createVoiceSessionRecord(input: CreateSessionRequest): SessionRecord {
+function createVoiceSessionRecord(input: CreateSessionRequest, ownerId?: string): SessionRecord {
   const timestamp = now();
   const session: VoiceSession = {
     id: id("ses"),
@@ -214,6 +214,7 @@ function createVoiceSessionRecord(input: CreateSessionRequest): SessionRecord {
   };
 
   const record: SessionRecord = {
+    ownerId,
     session,
     recordings: [],
     messages: [],
@@ -224,8 +225,11 @@ function createVoiceSessionRecord(input: CreateSessionRequest): SessionRecord {
   return record;
 }
 
-export async function createVoiceSession(input: CreateSessionRequest): Promise<SessionRecord> {
-  const record = createVoiceSessionRecord(input);
+export async function createVoiceSession(
+  input: CreateSessionRequest,
+  ownerId?: string,
+): Promise<SessionRecord> {
+  const record = createVoiceSessionRecord(input, ownerId);
   await persistVoiceSessions();
   return record;
 }
@@ -255,14 +259,15 @@ export async function updateVoiceSession(sessionId: string, patch: UpdateSession
   return record.session;
 }
 
-export function listVoiceSessions() {
-  return Array.from(sessions.values()).sort((a, b) =>
-    b.session.createdAt.localeCompare(a.session.createdAt),
-  );
+export function listVoiceSessions(ownerId?: string) {
+  return Array.from(sessions.values())
+    .filter((record) => record.ownerId === ownerId)
+    .sort((a, b) => b.session.createdAt.localeCompare(a.session.createdAt));
 }
 
-export function getVoiceSession(sessionId: string) {
-  return sessions.get(sessionId);
+export function getVoiceSession(sessionId: string, ownerId?: string) {
+  const record = sessions.get(sessionId);
+  return record?.ownerId === ownerId ? record : undefined;
 }
 
 export async function addRecording(
