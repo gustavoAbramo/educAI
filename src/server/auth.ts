@@ -1,5 +1,10 @@
 import { createHmac, randomBytes, randomUUID, scrypt, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
+import {
+  maximumPasswordLength,
+  minimumPasswordLength,
+  passwordProblem,
+} from "../lib/password-policy";
 import { findAuthAccount, insertAuthAccount } from "./auth-accounts";
 import { serverEnv } from "./runtime-env";
 
@@ -9,13 +14,12 @@ const scryptOptions = { N: 2 ** 15, r: 8, p: 3, maxmem: 48 * 1024 * 1024 };
 const jwtHeader = Buffer.from('{"alg":"HS256","typ":"JWT"}').toString("base64url");
 const passwordHashPattern = /^scrypt:[\da-f]{32}:[\da-f]{64}$/i;
 const memberId = z.string().uuid();
-const minimumPasswordLength = 12;
 const loginInput = z.object({
   email: z.string().trim().email().max(254).toLowerCase(),
-  password: z.string().min(1).max(256),
+  password: z.string().min(1).max(maximumPasswordLength),
 });
 const registerInput = loginInput.extend({
-  password: z.string().min(minimumPasswordLength).max(256),
+  password: z.string().min(minimumPasswordLength).max(maximumPasswordLength),
 });
 const attemptsByEmail = new Map<string, number>();
 let attemptWindowEnd = 0;
@@ -240,6 +244,10 @@ export async function handleAuthRequest(request: Request, url: URL) {
   }
 
   const { email, password } = input.data;
+  const weakness = registering ? passwordProblem(password, email) : undefined;
+  if (weakness) {
+    return authError(400, "WEAK_PASSWORD", `Senha fraca: ${weakness.label.toLowerCase()}.`);
+  }
   const now = Date.now();
   if (now >= attemptWindowEnd) {
     attemptWindowEnd = now + attemptWindowMs;

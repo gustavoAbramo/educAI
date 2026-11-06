@@ -75,6 +75,26 @@ Arquivos principais:
 - `src/services/*`: cliente frontend para consumir a API V1.
 - `src/types/api.ts`: tipos usados pelo frontend.
 
+### Frontend: rotas finas, telas em `src/features`
+
+- `src/routes/*.tsx`: so declaram a rota (caminho, `validateSearch`, `head` com
+  titulo da aba) e apontam para o componente da tela. Nao colocar logica aqui.
+- `src/features/<tela>/<tela>-page.tsx`: componente da tela. Para ler search
+  params ou contexto, use `getRouteApi("/caminho")` em vez de importar `Route`
+  (evita import circular).
+- `src/features/<tela>/model/*.ts`: tipos e funcoes puras da tela (parsers,
+  formatacao, rotulos). `src/features/<tela>/components/*.tsx`: pecas visuais.
+- `src/features/auth`: login e cadastro (validacao por campo, forca da senha,
+  aviso de Caps Lock, aceite dos termos). A regra de senha fica em
+  `src/lib/password-policy.ts` e e a mesma no servidor (`src/server/auth.ts`).
+- `src/features/accessibility`: tela de Acessibilidade, menu rapido flutuante
+  (Alt + Shift + A), guia de leitura, VLibras (Libras) e anunciador de troca de
+  tela para leitores de tela. As preferencias ficam em `src/lib/accessibility.ts`.
+- `src/features/system`: pagina 404 e pagina de erro.
+- `src/lib/route-access.ts`: lista unica de rotas protegidas e titulos das telas.
+  Rota nova que exige login precisa entrar em `protectedPaths`; endereco que nao
+  existe cai na 404 sem passar pelo login.
+
 ## Providers de transcricao
 
 A transcricao agora tem separacao clara entre provider mock e providers reais.
@@ -167,13 +187,13 @@ Em modo real:
   `GEMINI_TRANSCRIBE_MODEL` e depois cai em `gemini-3.8-flash`.
 - Falha real de geracao de materiais nao deve ser mascarada por material mock.
 
-A tela `src/routes/resultado.tsx` deve consumir transcricao, materiais e chat da
+A tela `src/features/resultado/` deve consumir transcricao, materiais e chat da
 API V1. Ela pode mostrar estados vazios honestos, mas nao deve voltar para os
 dados estaticos de `src/lib/mock-data.ts` quando existir `sessionId` real.
 
 ## Transcricao ao vivo na gravacao
 
-A tela `src/routes/aula.tsx` nao deve renderizar `mockTranscript` durante a
+A tela `src/features/aula/` nao deve renderizar `mockTranscript` durante a
 gravacao. Enquanto o audio esta sendo gravado pelo `MediaRecorder`, a interface
 pode mostrar uma previa local usando a Web Speech API do navegador
 (`SpeechRecognition`/`webkitSpeechRecognition`).
@@ -197,7 +217,7 @@ frontend, backend, full stack, endpoint, webhook, Docker, Figma e Stripe. Essa
 normalizacao ajuda a interface local e tambem orienta o pos-processamento leve
 da transcricao oficial.
 
-A previa inteligente em `src/routes/aula.tsx` deve mostrar sinais rapidos
+A previa inteligente em `src/features/aula/` deve mostrar sinais rapidos
 durante a gravacao: termos tecnicos detectados, possiveis problemas de
 transcricao, pontos importantes captados ate o momento e alertas de linguagem
 como informalidade, repeticao ou frases confusas. Essa previa e heuristica/local
@@ -219,7 +239,7 @@ pessoa audivel. `src/server/transcript-segments.ts` converte esses rotulos em
 participantes da sessao quando existirem. Se o provider nao conseguir separar
 falantes, o sistema ainda cai para segmentos estimados.
 
-A aba `Transcricao` em `src/routes/resultado.tsx` deve renderizar a transcricao
+A aba `Transcricao` em `src/features/resultado/` deve renderizar a transcricao
 final por blocos de `TranscriptSegment`, com falante e tempo estimado. Ela tambem
 pode editar falante/texto usando o endpoint V1 existente
 `PATCH /api/v1/sessions/{sessionId}/transcript`, marcando `status=EDITED`. A
@@ -252,7 +272,7 @@ provider nao estiver claro, usar texto generico de IA.
 ## Contexto rico da sessao
 
 O contrato V1 nao deve ganhar campos novos para configuracoes da tela
-`src/routes/nova-aula.tsx`. Campos como `theme`, `context`, `audience`,
+`src/features/nova-aula/`. Campos como `theme`, `context`, `audience`,
 `level`, `objectives`, `aiInstructions` e `outputsRequested` devem ser enviados
 dentro de `session.metadata`, preservando `title`, `type`, `language` e
 `summaryTemplate` no topo do payload V1.
@@ -285,7 +305,7 @@ providers reais mantem somente os tipos V1 correspondentes quando possivel
 `Proximos passos`). Saidas ainda nao conectadas visualmente, como flashcards,
 nao devem alterar contrato V1 nesta etapa.
 
-A tela `src/routes/resultado.tsx` possui uma aba de relatorio lendo o material
+A tela `src/features/resultado/` possui uma aba de relatorio lendo o material
 V1 `INSIGHTS` como documento analitico corrido, nao como varios cards soltos. O
 relatorio deve priorizar leitura profissional com secoes claras: resumo geral,
 pontos importantes, analise da comunicacao, erros de linguagem/informalidade,
@@ -353,7 +373,7 @@ estimadas, pois nao substituem avaliacao real feita pela IA no relatorio final.
 ## V2 - Assistente ao vivo
 
 O assistente NAO usa mais sidebar/drawer. A interacao acontece de forma
-contextual, integrada ao fluxo da tela de aula (`src/routes/aula.tsx`), por um
+contextual, integrada ao fluxo da tela de aula (`src/features/aula/`), por um
 rodape fixo renderizado pelo componente `src/components/contextual-assistant.tsx`
 (`ContextualAssistant`). Esse rodape traz: rotulo do assistente, alternancia de
 modo `Aluno`/`Mentor` compacta, sugestoes como chips/botoes (clicou, respondeu),
@@ -393,7 +413,7 @@ O contrato do assistente deve ser salvo junto com o audio final em
 permite reaproveitar a conversa depois no resultado final sem alterar o contrato
 V1 de transcricao ou materiais.
 
-A tela `src/routes/resultado.tsx` pode ler `metadata.liveAssistant` da ultima
+A tela `src/features/resultado/` pode ler `metadata.liveAssistant` da ultima
 gravacao e exibir uma secao resumida dentro do relatorio, com modo usado,
 quantidade de mensagens, contexto e ultimas interacoes. Essa leitura e apenas
 visual e nao deve alterar os materiais gerados pela V1.
@@ -416,7 +436,7 @@ transcricao ao vivo antes de carregar uma sessao real.
 
 ## Historico e biblioteca
 
-`src/routes/historico.tsx` deve funcionar como biblioteca operacional, nao apenas
+`src/features/historico/` deve funcionar como biblioteca operacional, nao apenas
 lista simples. A tela deve mostrar metricas de total/prontas/falhas/atencao,
 filtros por status (`READY`, `TRANSCRIBED`, `FAILED`, em processamento), busca
 por titulo, tipo, idioma, status, metadados e previa de material. Quando a

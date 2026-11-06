@@ -57,6 +57,12 @@ test("registered accounts keep separate sessions and the existing admin keeps le
     (await post("/api/auth/register", { email: "ana@example.com", password: "short" })).status,
     400,
   );
+  const weak = await post("/api/auth/register", {
+    email: "carla@example.com",
+    password: "carla-1234567",
+  });
+  assert.equal(weak.status, 400);
+  assert.equal((await weak.json()).error.code, "WEAK_PASSWORD");
   assert.equal(
     (
       await post(

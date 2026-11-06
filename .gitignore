@@ -17,6 +17,11 @@ dist-ssr
 .data/
 *.local
 
+# Segredos locais (chaves de IA, segredo do login)
+.env
+.env.*
+!.env.example
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
