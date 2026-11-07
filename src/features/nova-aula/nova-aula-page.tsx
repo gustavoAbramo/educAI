@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Mic, ArrowRight, Info, Sparkles, FileOutput, ChevronDown, Settings2 } from "lucide-react";
+import { Mic, ArrowRight, ChevronDown, Settings2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { BackButton } from "@/components/back-button";
@@ -11,34 +11,6 @@ const inputCls =
 const textareaCls =
   "w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring/60 transition placeholder:text-muted-foreground/60 resize-none";
 const labelCls = "text-[11px] font-medium text-muted-foreground mb-1.5 block";
-
-type SectionProps = {
-  index: number;
-  icon: React.ElementType;
-  title: string;
-  hint: string;
-  children: React.ReactNode;
-};
-
-function Section({ index, icon: Icon, title, hint, children }: SectionProps) {
-  return (
-    <section className="rounded-2xl border border-border/70 bg-card/40 backdrop-blur-sm shadow-soft overflow-hidden">
-      <header className="flex items-center gap-3 px-5 py-4 border-b border-border/60">
-        <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-primary/10 text-primary text-xs font-semibold">
-          {index}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-            <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
-          </div>
-          <p className="text-[11px] text-muted-foreground mt-0.5">{hint}</p>
-        </div>
-      </header>
-      <div className="p-5 space-y-4">{children}</div>
-    </section>
-  );
-}
 
 function cleanMetadata(metadata: Record<string, unknown>) {
   return Object.fromEntries(
@@ -213,18 +185,12 @@ export function NovaAula() {
           Antes de começar
         </h1>
         <p className="text-sm text-muted-foreground mt-1.5">
-          Ajude a IA a entender o contexto. Quanto mais claro, melhor o resultado.
+          Só o título é obrigatório. O resto ajuda a IA, mas é opcional.
         </p>
       </div>
 
       <div className="space-y-4">
-        {/* 1. Informações básicas */}
-        <Section
-          index={1}
-          icon={Info}
-          title="Informações básicas"
-          hint="O essencial para identificar a sessão."
-        >
+        <section className="rounded-2xl border border-border/70 bg-card/40 backdrop-blur-sm shadow-soft p-5 space-y-4">
           <label className="block">
             <span className={labelCls}>Título</span>
             <input
@@ -244,161 +210,30 @@ export function NovaAula() {
             />
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-3">
-            <label className="block">
-              <span className={labelCls}>Tema principal</span>
-              <input
-                value={theme}
-                onChange={(e) => setTheme(e.target.value)}
-                className={inputCls}
-                placeholder="Ex.: Industrialização na Europa"
-              />
-            </label>
-            <label className="block">
-              <span className={labelCls}>Área ou disciplina</span>
-              <select
-                className={inputCls}
-                value={discipline}
-                onChange={(e) => setDiscipline(e.target.value)}
-              >
-                <option value="" disabled>
-                  Selecione…
-                </option>
-                <option>História</option>
-                <option>Matemática</option>
-                <option>Biologia</option>
-                <option>Física</option>
-                <option>Literatura</option>
-                <option>Tecnologia</option>
-                <option>Negócios</option>
-              </select>
-            </label>
-          </div>
-        </Section>
-
-        {/* 2. Contexto para IA */}
-        <Section
-          index={2}
-          icon={Sparkles}
-          title="Contexto para IA"
-          hint="Detalhes que personalizam a análise."
-        >
-          <div className="grid sm:grid-cols-2 gap-3">
-            <label className="block">
-              <span className={labelCls}>Público-alvo</span>
-              <input
-                value={audience}
-                onChange={(e) => setAudience(e.target.value)}
-                className={inputCls}
-                placeholder="Ex.: 9º ano do ensino fundamental"
-              />
-            </label>
-            <div>
-              <span className={labelCls}>Nível da turma</span>
-              <Chips
-                options={["Iniciante", "Intermediário", "Avançado", "Misto"]}
-                value={level}
-                onChange={setLevel}
-              />
-            </div>
-          </div>
-
           <label className="block">
-            <span className={labelCls}>Objetivo da sessão</span>
-            <input
-              value={objectives}
-              onChange={(e) => setObjectives(e.target.value)}
-              className={inputCls}
-              placeholder="O que os alunos devem entender ao final?"
-            />
-          </label>
-
-          <label className="block">
-            <span className={labelCls}>Pontos importantes para a IA considerar</span>
+            <span className={labelCls}>O que a IA precisa saber? (opcional)</span>
             <textarea
               value={context}
               onChange={(e) => setContext(e.target.value)}
               rows={3}
               className={textareaCls}
-              placeholder="Conceitos-chave, exemplos a destacar, contexto da turma…"
+              placeholder="Turma, objetivo, conceitos-chave, o que destacar ou evitar…"
             />
           </label>
-        </Section>
+        </section>
 
-        {/* 3. Saída desejada */}
-        <Section
-          index={3}
-          icon={FileOutput}
-          title="Saída desejada"
-          hint="O que gerar ao final da sessão."
-        >
-          <div>
-            <span className={labelCls}>Materiais a gerar</span>
-            <Chips
-              options={[
-                "Resumo",
-                "Relatório técnico",
-                "Tópicos",
-                "Mapa mental",
-                "Diagnostico da aula",
-                "Atividades",
-                "Perguntas e respostas",
-                "Flashcards",
-                "Próximos passos",
-              ]}
-              value={outputs}
-              onChange={setOutputs}
-              multi
-            />
-          </div>
-
-          <div>
-            <span className={labelCls}>Estilo do resumo</span>
-            <Chips
-              options={["Curto", "Detalhado", "Para alunos", "Para professor", "Em tópicos"]}
-              value={summaryStyle}
-              onChange={setSummaryStyle}
-            />
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-3">
-            <div>
-              <span className={labelCls}>Tom da IA</span>
-              <Chips
-                options={["Didático", "Simples", "Técnico", "Motivador", "Formal", "Descontraído"]}
-                value={tone}
-                onChange={setTone}
-              />
-            </div>
-            <label className="block">
-              <span className={labelCls}>Idioma da transcrição</span>
-              <select
-                className={inputCls}
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-              >
-                <option value="pt-BR">Português (BR)</option>
-                <option value="pt-PT">Português (PT)</option>
-                <option value="en-US">English (US)</option>
-                <option value="es">Español</option>
-                <option value="fr">Français</option>
-              </select>
-            </label>
-          </div>
-        </Section>
-
-        {/* Configurações avançadas */}
         <div className="rounded-2xl border border-border/70 bg-card/30 overflow-hidden">
           <button
             type="button"
             onClick={() => setAdvancedOpen((v) => !v)}
+            aria-expanded={advancedOpen}
             className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-accent/40 transition text-left"
           >
             <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
             <div className="flex-1">
-              <div className="text-sm font-medium">Configurações avançadas</div>
+              <div className="text-sm font-medium">Mais opções</div>
               <div className="text-[11px] text-muted-foreground">
-                Opcional — refine ainda mais o contexto.
+                Opcional — disciplina, público, materiais, tom e idioma.
               </div>
             </div>
             <ChevronDown
@@ -409,64 +244,115 @@ export function NovaAula() {
           </button>
 
           {advancedOpen && (
-            <div className="p-5 pt-2 space-y-4 border-t border-border/60 animate-fade-in">
-              <label className="block">
-                <span className={labelCls}>Pontos que devem ser evitados</span>
-                <textarea
-                  value={avoidTopics}
-                  onChange={(e) => setAvoidTopics(e.target.value)}
-                  rows={2}
-                  className={textareaCls}
-                  placeholder="Tópicos, exemplos ou termos a evitar…"
-                />
-              </label>
-
+            <div className="p-5 pt-4 space-y-4 border-t border-border/60 animate-fade-in">
               <div className="grid sm:grid-cols-2 gap-3">
                 <label className="block">
-                  <span className={labelCls}>Duração prevista</span>
-                  <input
-                    value={expectedDuration}
-                    onChange={(e) => setExpectedDuration(e.target.value)}
-                    className={inputCls}
-                    placeholder="Ex.: 50 minutos"
-                  />
-                </label>
-                <label className="block">
-                  <span className={labelCls}>Formato</span>
+                  <span className={labelCls}>Área ou disciplina</span>
                   <select
                     className={inputCls}
-                    value={sessionFormat}
-                    onChange={(e) => setSessionFormat(e.target.value)}
+                    value={discipline}
+                    onChange={(e) => setDiscipline(e.target.value)}
                   >
-                    <option>Presencial</option>
-                    <option>Online</option>
-                    <option>Híbrido</option>
-                    <option>Gravação local</option>
+                    <option value="">Não informar</option>
+                    <option>História</option>
+                    <option>Matemática</option>
+                    <option>Biologia</option>
+                    <option>Física</option>
+                    <option>Literatura</option>
+                    <option>Tecnologia</option>
+                    <option>Negócios</option>
                   </select>
+                </label>
+                <label className="block">
+                  <span className={labelCls}>Público-alvo</span>
+                  <input
+                    value={audience}
+                    onChange={(e) => setAudience(e.target.value)}
+                    className={inputCls}
+                    placeholder="Ex.: 9º ano do ensino fundamental"
+                  />
                 </label>
               </div>
 
+              <div>
+                <span className={labelCls}>Nível da turma</span>
+                <Chips
+                  options={["Iniciante", "Intermediário", "Avançado", "Misto"]}
+                  value={level}
+                  onChange={setLevel}
+                />
+              </div>
+
               <label className="block">
-                <span className={labelCls}>Tarefas ou combinados anteriores</span>
-                <textarea
-                  value={previousTasks}
-                  onChange={(e) => setPreviousTasks(e.target.value)}
-                  rows={2}
-                  className={textareaCls}
-                  placeholder="O que foi pedido na sessão anterior…"
+                <span className={labelCls}>Objetivo da sessão</span>
+                <input
+                  value={objectives}
+                  onChange={(e) => setObjectives(e.target.value)}
+                  className={inputCls}
+                  placeholder="O que os alunos devem entender ao final?"
                 />
               </label>
 
-              <label className="block">
-                <span className={labelCls}>Observações adicionais para IA</span>
-                <textarea
-                  value={aiInstructions}
-                  onChange={(e) => setAiInstructions(e.target.value)}
-                  rows={2}
-                  className={textareaCls}
-                  placeholder="Qualquer detalhe relevante…"
+              <div>
+                <span className={labelCls}>Materiais a gerar</span>
+                <Chips
+                  options={[
+                    "Resumo",
+                    "Relatório técnico",
+                    "Tópicos",
+                    "Mapa mental",
+                    "Diagnostico da aula",
+                    "Atividades",
+                    "Perguntas e respostas",
+                    "Flashcards",
+                    "Próximos passos",
+                  ]}
+                  value={outputs}
+                  onChange={setOutputs}
+                  multi
                 />
-              </label>
+              </div>
+
+              <div>
+                <span className={labelCls}>Estilo do resumo</span>
+                <Chips
+                  options={["Curto", "Detalhado", "Para alunos", "Para professor", "Em tópicos"]}
+                  value={summaryStyle}
+                  onChange={setSummaryStyle}
+                />
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <span className={labelCls}>Tom da IA</span>
+                  <Chips
+                    options={[
+                      "Didático",
+                      "Simples",
+                      "Técnico",
+                      "Motivador",
+                      "Formal",
+                      "Descontraído",
+                    ]}
+                    value={tone}
+                    onChange={setTone}
+                  />
+                </div>
+                <label className="block">
+                  <span className={labelCls}>Idioma da transcrição</span>
+                  <select
+                    className={inputCls}
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                  >
+                    <option value="pt-BR">Português (BR)</option>
+                    <option value="pt-PT">Português (PT)</option>
+                    <option value="en-US">English (US)</option>
+                    <option value="es">Español</option>
+                    <option value="fr">Français</option>
+                  </select>
+                </label>
+              </div>
             </div>
           )}
         </div>

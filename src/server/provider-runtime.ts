@@ -169,6 +169,8 @@ function autoGenerationProvider(): GenerationProviderMode {
   return "ollama";
 }
 
+export const defaultGeminiModel = "gemini-3.8-flash";
+
 function snapshotSettings(): ProviderRuntimeSettings {
   return {
     transcriptionProvider:
@@ -187,6 +189,7 @@ function snapshotSettings(): ProviderRuntimeSettings {
       serverEnv("OLLAMA_MODEL") ?? cachedSettings.ollamaModel,
       "qwen3:8b",
     ),
+    geminiModel: normalizeModel(cachedSettings.geminiModel, defaultGeminiModel),
     fasterWhisperBaseUrl: normalizeProviderUrl(
       serverEnv("FASTER_WHISPER_BASE_URL") ?? cachedSettings.fasterWhisperBaseUrl,
       "http://localhost:8765",
@@ -360,6 +363,9 @@ export async function ensureProviderRuntimeConfigLoaded() {
       if (typeof parsed.settings.ollamaModel === "string") {
         nextSettings.ollamaModel = parsed.settings.ollamaModel.trim();
       }
+      if (typeof parsed.settings.geminiModel === "string") {
+        nextSettings.geminiModel = parsed.settings.geminiModel.trim();
+      }
       if (typeof parsed.settings.fasterWhisperBaseUrl === "string") {
         nextSettings.fasterWhisperBaseUrl = tryNormalizePersistedUrl(
           parsed.settings.fasterWhisperBaseUrl,
@@ -437,6 +443,10 @@ export async function updateProviderRuntimeConfig(
 
   if (patch.ollamaModel !== undefined) {
     nextSettings.ollamaModel = normalizeConfiguredModel(patch.ollamaModel, "Ollama");
+  }
+
+  if (patch.geminiModel !== undefined) {
+    nextSettings.geminiModel = normalizeConfiguredModel(patch.geminiModel, "Gemini");
   }
 
   if (patch.fasterWhisperBaseUrl !== undefined) {

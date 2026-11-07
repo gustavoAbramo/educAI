@@ -74,6 +74,7 @@ export type ProviderRuntimeSettings = {
   assistantWebSearch: AssistantWebSearchMode;
   ollamaBaseUrl: string;
   ollamaModel: string;
+  geminiModel: string;
   fasterWhisperBaseUrl: string;
   fasterWhisperModel: string;
   updatedAt: string;

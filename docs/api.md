@@ -625,7 +625,7 @@ OPENAI_TRANSCRIBE_MODEL=gpt-4o-transcribe
 # Para usar transcricao real do Gemini (opcional)
 GEMINI_API_KEY=...
 EDUCAI_TRANSCRIPTION_PROVIDER=gemini
-GEMINI_TRANSCRIBE_MODEL=gemini-3.6-flash
+GEMINI_TRANSCRIBE_MODEL=gemini-3.8-flash
 
 # Para customizar localizacao de armazenamento (opcional)
 EDUCAI_VOICE_STORE_PATH=.data/voice-sessions.json
@@ -673,7 +673,7 @@ Para testar Gemini localmente no PowerShell:
 ```powershell
 $env:EDUCAI_TRANSCRIPTION_PROVIDER = "gemini"
 $env:GEMINI_API_KEY = "sua-chave-local"
-$env:GEMINI_TRANSCRIBE_MODEL = "gemini-3.6-flash"
+$env:GEMINI_TRANSCRIBE_MODEL = "gemini-3.8-flash"
 npm.cmd run dev:api
 ```
 

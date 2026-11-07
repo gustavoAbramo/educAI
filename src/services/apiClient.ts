@@ -85,6 +85,9 @@ export const apiClient = {
     patchJson<T>(path: string, body: unknown) {
         return request<T>(path, { method: "PATCH", body: JSON.stringify(body) });
     },
+    delete<T>(path: string) {
+        return request<T>(path, { method: "DELETE" });
+    },
 };
 
 export { baseUrl };

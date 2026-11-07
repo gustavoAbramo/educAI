@@ -140,3 +140,18 @@ export async function readStoredRecording(
     mimeType: recording.mimeType,
   };
 }
+
+// Apaga a pasta de audios de uma sessao. O id e validado e o caminho tem de
+// ficar dentro da pasta de gravacoes, para nunca apagar nada fora dela.
+export async function deleteStoredRecordings(sessionId: string) {
+  if (!/^ses_[\w-]+$/.test(sessionId)) return;
+
+  const node = await loadNodeFileSystem();
+  if (!node) return;
+
+  const root = getRecordingsRoot(node.path);
+  if (!root) return;
+
+  const directory = resolvePathWithinRoot(node.path, root, node.path.join(root, sessionId));
+  await node.fs.rm(directory, { recursive: true, force: true });
+}

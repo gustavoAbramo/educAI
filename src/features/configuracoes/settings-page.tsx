@@ -163,6 +163,7 @@ function Configuracoes() {
   const [providerError, setProviderError] = useState("");
   const [ollamaBaseUrlDraft, setOllamaBaseUrlDraft] = useState("http://localhost:11434");
   const [ollamaModelDraft, setOllamaModelDraft] = useState("qwen3:8b");
+  const [geminiModelDraft, setGeminiModelDraft] = useState("gemini-3.8-flash");
   const [fasterWhisperBaseUrlDraft, setFasterWhisperBaseUrlDraft] =
     useState("http://localhost:8765");
   const [fasterWhisperModelDraft, setFasterWhisperModelDraft] = useState("small");
@@ -286,6 +287,7 @@ function Configuracoes() {
       setProviderConfig(data);
       setOllamaBaseUrlDraft(data.settings.ollamaBaseUrl);
       setOllamaModelDraft(data.settings.ollamaModel);
+      setGeminiModelDraft(data.settings.geminiModel);
       setFasterWhisperBaseUrlDraft(data.settings.fasterWhisperBaseUrl);
       setFasterWhisperModelDraft(data.settings.fasterWhisperModel);
       setOllamaStatus((current) => ({
@@ -454,6 +456,7 @@ function Configuracoes() {
       setProviderConfig(data);
       setOllamaBaseUrlDraft(data.settings.ollamaBaseUrl);
       setOllamaModelDraft(data.settings.ollamaModel);
+      setGeminiModelDraft(data.settings.geminiModel);
       setFasterWhisperBaseUrlDraft(data.settings.fasterWhisperBaseUrl);
       setFasterWhisperModelDraft(data.settings.fasterWhisperModel);
       setOllamaStatus((current) => ({
@@ -1034,6 +1037,46 @@ function Configuracoes() {
                         </button>
                       </div>
                     </div>
+                    <div>
+                      <label
+                        htmlFor="gemini-model"
+                        className="mb-1 block text-xs text-muted-foreground"
+                      >
+                        Modelo do Gemini (transcrição e materiais)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          id="gemini-model"
+                          className={inputClassName}
+                          value={geminiModelDraft}
+                          onChange={(event) => setGeminiModelDraft(event.target.value)}
+                          placeholder="gemini-3.8-flash"
+                          list="gemini-model-options"
+                          disabled={providerLoading || providerSaving}
+                        />
+                        <datalist id="gemini-model-options">
+                          <option value="gemini-3.8-flash" />
+                          <option value="gemini-3.5-flash-lite" />
+                        </datalist>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void saveProviderConfig(
+                              { geminiModel: geminiModelDraft },
+                              "Modelo do Gemini salvo",
+                            )
+                          }
+                          disabled={!geminiModelDraft.trim() || providerLoading || providerSaving}
+                          className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-card px-3 text-sm transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Salvar
+                        </button>
+                      </div>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        Se a cota do plano gratuito acabar, um modelo Flash-Lite costuma ter limite
+                        diário maior.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </Section>
@@ -1044,7 +1087,7 @@ function Configuracoes() {
               >
                 <Row
                   title="Testar conexões"
-                  desc="Escolha um provedor no menu ou valide todos de uma vez."
+                  desc="Escolha um provedor no menu ou valide todos de uma vez. O teste do Gemini faz uma chamada real e gasta 1 pedido da cota diária."
                 >
                   <div className="flex w-full flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
                     <DropdownMenu>

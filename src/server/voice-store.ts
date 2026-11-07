@@ -13,6 +13,7 @@ import type {
 } from "@/lib/voice-intelligence";
 import { sessionSignalSnapshotFromMetadata } from "@/lib/session-signals";
 import { diarizeRemoteTranscriptWithWorker } from "./diarization-provider";
+import { deleteStoredRecordings } from "./local-recordings";
 import { answerChat, createMaterials, transcribeRecording } from "./voice-pipeline";
 import {
   loadVoiceSessionsFromPersistence,
@@ -257,6 +258,18 @@ export async function updateVoiceSession(sessionId: string, patch: UpdateSession
   record.session.updatedAt = now();
   await persistVoiceSessions();
   return record.session;
+}
+
+export async function deleteVoiceSession(sessionId: string) {
+  if (!sessions.delete(sessionId)) throw new Error("SESSION_NOT_FOUND");
+  await persistVoiceSessions();
+  try {
+    await deleteStoredRecordings(sessionId);
+  } catch (error) {
+    // A sessao ja saiu da lista; um audio que sobrar no disco nao deve
+    // fazer a exclusao parecer que falhou.
+    console.warn("[educAI] Nao foi possivel apagar os audios da sessao.", error);
+  }
 }
 
 export function listVoiceSessions(ownerId?: string) {

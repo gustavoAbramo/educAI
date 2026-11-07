@@ -93,6 +93,7 @@ export const emptyProviderConfig: ProviderRuntimeSettingsEnvelope = {
     assistantWebSearch: "auto",
     ollamaBaseUrl: "http://localhost:11434",
     ollamaModel: "qwen3:8b",
+    geminiModel: "gemini-3.8-flash",
     fasterWhisperBaseUrl: "http://localhost:8765",
     fasterWhisperModel: "small",
     updatedAt: "",

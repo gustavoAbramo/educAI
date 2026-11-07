@@ -108,8 +108,8 @@ EDUCAI_DEBUG_PROVIDERS=true | false
 OPENAI_API_KEY=sk-...
 OPENAI_TRANSCRIBE_MODEL=gpt-4o-transcribe
 GEMINI_API_KEY=...
-GEMINI_TRANSCRIBE_MODEL=gemini-3.6-flash
-GEMINI_INSIGHTS_MODEL=gemini-3.6-flash
+GEMINI_TRANSCRIBE_MODEL=gemini-3.8-flash
+GEMINI_INSIGHTS_MODEL=gemini-3.8-flash
 ```
 
 Comportamento atual:
@@ -191,7 +191,7 @@ Em modo real:
 - `EDUCAI_TRANSCRIPTION_PROVIDER=gemini` usa Gemini tambem para materiais.
 - `GEMINI_INSIGHTS_MODEL` pode separar o modelo de geracao de materiais do
   modelo de transcricao. Se nao for definido, o sistema reutiliza
-  `GEMINI_TRANSCRIBE_MODEL` e depois cai em `gemini-3.6-flash`.
+  `GEMINI_TRANSCRIBE_MODEL` e depois cai em `gemini-3.8-flash`.
 - Falha real de geracao de materiais nao deve ser mascarada por material mock.
 
 A tela `src/features/resultado/` deve consumir transcricao, materiais e chat da

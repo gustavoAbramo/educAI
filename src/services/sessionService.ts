@@ -23,6 +23,10 @@ export function updateSession(sessionId: string, payload: UpdateSessionRequest) 
   return apiClient.patchJson<{ data: Session }>(`/sessions/${sessionId}`, payload);
 }
 
+export function deleteSession(sessionId: string) {
+  return apiClient.delete<{ data: { id: string; deleted: boolean } }>(`/sessions/${sessionId}`);
+}
+
 export function getSessionOverview(sessionId: string) {
   return apiClient.get<SessionOverviewResponse>(`/sessions/${sessionId}/overview`);
 }

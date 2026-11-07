@@ -10,10 +10,22 @@ import {
   Plus,
   RotateCcw,
   Search,
+  Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { BackButton } from "@/components/back-button";
 import { StatusBadge } from "@/components/status-badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   formatSessionDate,
   formatSessionUpdatedLabel,
@@ -21,7 +33,7 @@ import {
 } from "@/lib/session-format";
 import { cn } from "@/lib/utils";
 import { getSessionMaterials } from "@/services/materialService";
-import { getSessions } from "@/services/sessionService";
+import { deleteSession, getSessions } from "@/services/sessionService";
 import type { Session, SessionMaterial } from "@/types/api";
 
 const filters = [
@@ -78,6 +90,9 @@ function isProcessing(session: Pick<Session, "status">) {
   );
 }
 
+// O que esta sendo apagado: uma sessao ou todas as que falharam.
+type PendingDelete = { kind: "one"; id: string; title: string } | { kind: "failed"; ids: string[] };
+
 function metadataText(session: Session) {
   const metadata = session.metadata ?? {};
   const values = [
@@ -119,6 +134,33 @@ export function Historico() {
   const [previewsLoading, setPreviewsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    const ids = pendingDelete.kind === "one" ? [pendingDelete.id] : pendingDelete.ids;
+    setDeleting(true);
+
+    const results = await Promise.allSettled(ids.map((id) => deleteSession(id)));
+    const deleted = ids.filter((_, index) => results[index].status === "fulfilled");
+    const failedCount = ids.length - deleted.length;
+
+    setSessions((current) => current.filter((session) => !deleted.includes(session.id)));
+    setDeleting(false);
+    setPendingDelete(null);
+
+    if (deleted.length) {
+      toast.success(deleted.length === 1 ? "Sessão apagada" : `${deleted.length} sessões apagadas`);
+    }
+    if (failedCount) {
+      toast.error(
+        failedCount === 1
+          ? "Não foi possível apagar uma sessão"
+          : `Não foi possível apagar ${failedCount} sessões`,
+      );
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -339,6 +381,21 @@ export function Historico() {
           />
         </div>
         <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          {stats.failed > 0 ? (
+            <button
+              type="button"
+              onClick={() =>
+                setPendingDelete({
+                  kind: "failed",
+                  ids: sessions.filter((session) => session.status === "FAILED").map((s) => s.id),
+                })
+              }
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-destructive/30 bg-card px-3 text-xs whitespace-nowrap text-destructive transition hover:bg-destructive/10"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Apagar falhas ({stats.failed})
+            </button>
+          ) : null}
           {filters.map((item) => {
             const active = filter === item.id;
             return (
@@ -469,19 +526,73 @@ export function Historico() {
                         : "Acompanhar sessão"}
                   </span>
                 )}
-                <Link
-                  to={item.target}
-                  search={{ sessionId: item.id } as never}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground transition hover:opacity-95"
-                >
-                  Abrir
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                </Link>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPendingDelete({ kind: "one", id: item.id, title: item.title })
+                    }
+                    aria-label={`Apagar a sessão ${item.title}`}
+                    title="Apagar sessão"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                  <Link
+                    to={item.target}
+                    search={{ sessionId: item.id } as never}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground transition hover:opacity-95"
+                  >
+                    Abrir
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
               </div>
             </article>
           ))}
         </div>
       ) : null}
+
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingDelete?.kind === "failed"
+                ? `Apagar ${pendingDelete.ids.length} sessões com falha?`
+                : "Apagar esta sessão?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete?.kind === "one" ? (
+                <>
+                  <strong className="text-foreground">{pendingDelete.title}</strong> será apagada
+                  com o áudio, a transcrição e os materiais.{" "}
+                </>
+              ) : (
+                "Elas serão apagadas com os áudios, transcrições e materiais. "
+              )}
+              Não dá para desfazer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                void confirmDelete();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Apagando..." : "Apagar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

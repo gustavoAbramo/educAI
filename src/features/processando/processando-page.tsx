@@ -1,5 +1,14 @@
 import { useNavigate, getRouteApi } from "@tanstack/react-router";
-import { Check, Loader2, FileText, ListTree, Network, Sparkles, MessageSquare } from "lucide-react";
+import {
+  Check,
+  Loader2,
+  FileText,
+  ListTree,
+  Network,
+  Sparkles,
+  MessageSquare,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ApiClientError } from "@/services/apiClient";
@@ -7,7 +16,7 @@ import { generateSessionMaterials } from "@/services/materialService";
 import { getSessionById, getSessionOverview } from "@/services/sessionService";
 import { getSessionStatus } from "@/services/statusService";
 import { transcribeSession } from "@/services/transcriptService";
-import type { Session, SessionProcessingStatus } from "@/types/api";
+import type { Session, SessionProcessingStatus, SessionStatus } from "@/types/api";
 
 const stages = [
   { icon: FileText, label: "Transcrevendo áudio" },
@@ -16,6 +25,15 @@ const stages = [
   { icon: Network, label: "Montando mapa mental" },
   { icon: MessageSquare, label: "Preparando assistente da aula" },
 ];
+
+// A etapa vem do status real, nao da porcentagem: antes, 45% durante a
+// transcricao aparecia como "Gerando resumo". Todos os materiais saem de uma
+// chamada so, entao a fase de materiais fica na primeira etapa dela.
+function stageForStatus(status: SessionStatus) {
+  if (status === "READY") return stages.length;
+  if (status === "TRANSCRIBED" || status === "GENERATING_MATERIALS") return 1;
+  return 0;
+}
 
 function errorCause(error: unknown) {
   if (!(error instanceof ApiClientError)) return undefined;
@@ -43,10 +61,11 @@ function readableTranscriptionError(message: string) {
     ].join(" ");
   }
 
-  if (/quota exceeded|429/i.test(message)) {
+  if (/quota|429/i.test(message)) {
     return [
-      `${provider} recusou a transcricao por cota excedida (429).`,
-      "Verifique o limite/plano/billing da chave ou teste com outra chave/modelo.",
+      `A cota da sua chave do ${provider} acabou (429).`,
+      "No plano gratuito ela volta no dia seguinte. Para continuar agora, troque o modelo",
+      "(por exemplo, um Flash-Lite) ou a chave em Configurações e tente novamente.",
     ].join(" ");
   }
 
@@ -109,15 +128,16 @@ export function Processando() {
 
     const start = async () => {
       try {
-        const current = await getSessionStatus(sessionId);
-        if (current.data.status === "READY") {
-          const overview = await getSessionOverview(sessionId);
-          setSession(overview.data.session);
-          setStatus(overview.data.status);
+        const current = await getSessionOverview(sessionId);
+        if (current.data.status.status === "READY") {
+          setSession(current.data.session);
+          setStatus(current.data.status);
           return;
         }
 
-        if (current.data.status !== "TRANSCRIBED") {
+        // Se a transcricao ja existe (ex.: falhou so a geracao de materiais),
+        // nao transcreve de novo: isso gastaria cota do provedor a toa.
+        if (!current.data.transcriptId) {
           await transcribeSession(sessionId);
         }
 
@@ -210,14 +230,23 @@ export function Processando() {
 
   const rawProgress = status?.progress ?? Math.min(95, (step / stages.length) * 100);
   const progress = status?.status === "READY" ? 100 : Math.min(98, rawProgress);
-  const effectiveStep = status
-    ? Math.min(stages.length, Math.floor((progress / 100) * stages.length))
-    : step;
   const statusFailure = status?.status === "FAILED" && status.error ? status.error : "";
   const displayTranscriptionError =
     transcribeError ||
     materialsError ||
     (statusFailure ? readableTranscriptionError(statusFailure) : "");
+  // Quando falha, a etapa que falhou para de girar: a transcricao e a
+  // primeira etapa; qualquer outra falha vem da geracao de materiais.
+  const failed = Boolean(displayTranscriptionError) || status?.status === "FAILED";
+  const failedAtTranscription =
+    Boolean(transcribeError) || (!materialsError && /transcri/i.test(status?.currentStep ?? ""));
+  const effectiveStep = failed
+    ? failedAtTranscription
+      ? 0
+      : 1
+    : status
+      ? stageForStatus(status.status)
+      : step;
   const statusMessage =
     status?.status === "READY"
       ? "Sessão pronta"
@@ -233,6 +262,7 @@ export function Processando() {
     hasNavigated.current = false;
     transcribeRequested.current = null;
     setStep(0);
+    setStatus(null);
     setTranscribeError("");
     setMaterialsError("");
     setProcessingAttempt((attempt) => attempt + 1);
@@ -335,6 +365,8 @@ export function Processando() {
                 <div className="h-7 w-7 grid place-items-center rounded-md bg-muted shrink-0">
                   {done ? (
                     <Check className="h-4 w-4 text-primary" />
+                  ) : active && failed ? (
+                    <X className="h-4 w-4 text-destructive" />
                   ) : active ? (
                     <Loader2 className="h-4 w-4 text-primary animate-spin" />
                   ) : (
@@ -345,7 +377,10 @@ export function Processando() {
                 {done && (
                   <span className="ml-auto text-[10px] text-primary font-medium">Concluído</span>
                 )}
-                {active && (
+                {active && failed && (
+                  <span className="ml-auto text-[10px] text-destructive font-medium">Falhou</span>
+                )}
+                {active && !failed && (
                   <span className="ml-auto text-[10px] text-muted-foreground">em andamento…</span>
                 )}
               </li>

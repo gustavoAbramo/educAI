@@ -48,6 +48,7 @@ import {
   addUserMessage,
   answerSessionChat,
   createVoiceSession,
+  deleteVoiceSession,
   ensureVoiceStoreLoaded,
   generateSessionMaterials,
   getMaterial,
@@ -84,7 +85,7 @@ class ApiError extends Error {
 function corsHeaders() {
   return {
     "access-control-allow-origin": "*",
-    "access-control-allow-methods": "GET,POST,PATCH,OPTIONS",
+    "access-control-allow-methods": "GET,POST,PATCH,DELETE,OPTIONS",
     "access-control-allow-headers": "content-type, authorization, x-api-key",
     "access-control-max-age": "86400",
   };
@@ -388,6 +389,13 @@ function validateProviderSettingsPatch(
     patch.ollamaModel = payload.ollamaModel;
   }
 
+  if ("geminiModel" in payload) {
+    if (typeof payload.geminiModel !== "string") {
+      throw new ApiError(400, "INVALID_REQUEST", "geminiModel must be a string.");
+    }
+    patch.geminiModel = payload.geminiModel;
+  }
+
   if ("fasterWhisperBaseUrl" in payload) {
     if (typeof payload.fasterWhisperBaseUrl !== "string") {
       throw new ApiError(400, "INVALID_REQUEST", "fasterWhisperBaseUrl must be a string.");
@@ -565,6 +573,11 @@ async function handleSessions(request: Request, route: RouteMatch, ownerId?: str
   if (!resource && request.method === "PATCH") {
     const body = await readJson<Record<string, unknown>>(request);
     return json({ data: await updateVoiceSession(record.session.id, validateSessionPatch(body)) });
+  }
+
+  if (!resource && request.method === "DELETE") {
+    await deleteVoiceSession(record.session.id);
+    return json({ data: { id: record.session.id, deleted: true } });
   }
 
   if (resource === "overview" && request.method === "GET") {
