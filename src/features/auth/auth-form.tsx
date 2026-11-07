@@ -6,7 +6,7 @@ import {
   maximumPasswordLength,
   passwordProblem,
 } from "@/lib/password-policy";
-import { localDestination } from "./auth-destination";
+import { defaultDestination, localDestination } from "./auth-destination";
 import { PasswordField } from "./password-field";
 import { PasswordStrength } from "./password-strength";
 import "./auth.css";
@@ -113,7 +113,9 @@ export function AuthForm({ mode, voltar }: { mode: "login" | "register"; voltar?
         body: JSON.stringify({ email: email.trim(), password }),
       });
       if (response.ok) {
-        window.location.replace(localDestination(voltar));
+        // Depois de criar a conta a pessoa sempre cai no Inicio, nunca na
+        // tela de nova aula.
+        window.location.replace(registering ? defaultDestination : localDestination(voltar));
         return;
       }
       const payload = await response.json().catch(() => ({}));
