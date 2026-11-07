@@ -15,7 +15,7 @@ import { ErrorPage } from "@/features/system/error-page";
 import { NotFoundPage } from "@/features/system/not-found-page";
 import { accessibilityBootScript } from "@/lib/accessibility";
 import { checkWorkspaceSession } from "@/lib/auth-session";
-import { isAuthPath, isProtectedPath } from "@/lib/route-access";
+import { isAuthPath, isProtectedPath, normalizePath } from "@/lib/route-access";
 import appCss from "../styles.css?url";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -25,9 +25,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     if (!isProtectedPath(location.pathname)) return { canManageSettings: false };
     const session = await checkWorkspaceSession();
     if (!session) {
+      // Quem clica em "Iniciar nova aula" na landing page precisa entrar
+      // primeiro; depois do login a pessoa cai no Início, nao direto na
+      // criacao da aula.
+      const voltar = normalizePath(location.pathname) === "/nova-aula" ? "/painel" : location.href;
       throw redirect({
         to: "/login",
-        search: { voltar: location.href },
+        search: { voltar },
         replace: true,
         headers: { "cache-control": "no-store" },
       });
