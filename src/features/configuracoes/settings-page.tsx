@@ -24,6 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
 import type {
   AssistantWebSearchMode,
   AppSettingsCenterEnvelope,
@@ -922,6 +923,34 @@ function Configuracoes() {
           {activeSection === "ia" ? (
             <>
               <Section
+                title="Modo demonstração"
+                description="Use o educAI inteiro sem nenhuma IA configurada."
+              >
+                <Row
+                  title="Usar dados simulados"
+                  desc="Transcrição, materiais e chat passam a ser simulados. Bom para apresentar ou testar as telas. Suas escolhas de provedor voltam quando desligar."
+                >
+                  <Switch
+                    aria-label="Usar dados simulados"
+                    checked={providerConfig.settings.demoMode}
+                    disabled={providerLoading || providerSaving}
+                    onCheckedChange={(checked) => {
+                      void saveProviderConfig(
+                        { demoMode: checked },
+                        checked ? "Modo demonstração ligado" : "Modo demonstração desligado",
+                      );
+                    }}
+                  />
+                </Row>
+                {providerConfig.settings.demoMode ? (
+                  <div className="px-5 py-3 text-xs text-amber-700 dark:text-amber-300">
+                    Ligado: os resultados são de exemplo e não vêm do áudio gravado. Vale para todas
+                    as contas deste servidor.
+                  </div>
+                ) : null}
+              </Section>
+
+              <Section
                 title="Provedor de IA"
                 description="Quem gera os materiais, o chat contextual e as respostas do assistente."
               >
@@ -938,7 +967,7 @@ function Configuracoes() {
                         "Provider de IA atualizado",
                       );
                     }}
-                    disabled={providerLoading || providerSaving}
+                    disabled={providerLoading || providerSaving || providerConfig.settings.demoMode}
                   >
                     {generationItems.map((item) => (
                       <option key={item.id} value={item.id} disabled={!item.selectable}>
@@ -1373,7 +1402,7 @@ function Configuracoes() {
                         "Provider de transcricao atualizado",
                       );
                     }}
-                    disabled={providerLoading || providerSaving}
+                    disabled={providerLoading || providerSaving || providerConfig.settings.demoMode}
                   >
                     {transcriptionItems.map((item) => (
                       <option key={item.id} value={item.id} disabled={!item.selectable}>

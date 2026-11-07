@@ -410,6 +410,13 @@ function validateProviderSettingsPatch(
     patch.fasterWhisperModel = payload.fasterWhisperModel;
   }
 
+  if ("demoMode" in payload) {
+    if (typeof payload.demoMode !== "boolean") {
+      throw new ApiError(400, "INVALID_REQUEST", "demoMode must be a boolean.");
+    }
+    patch.demoMode = payload.demoMode;
+  }
+
   return patch;
 }
 

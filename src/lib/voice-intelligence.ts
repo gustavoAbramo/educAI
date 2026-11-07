@@ -77,6 +77,8 @@ export type ProviderRuntimeSettings = {
   geminiModel: string;
   fasterWhisperBaseUrl: string;
   fasterWhisperModel: string;
+  // Modo demonstracao: transcricao e materiais simulados, sem nenhuma IA.
+  demoMode: boolean;
   updatedAt: string;
 };
 

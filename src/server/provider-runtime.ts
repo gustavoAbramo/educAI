@@ -50,7 +50,12 @@ function hasGeminiKey() {
   return Boolean(getConfiguredSecret("GEMINI_API_KEY")?.trim());
 }
 
+export function demoModeEnabled() {
+  return cachedSettings.demoMode === true;
+}
+
 export function simulatedProvidersEnabled() {
+  if (demoModeEnabled()) return true;
   const value = serverEnv("EDUCAI_ENABLE_SIMULATED_PROVIDERS")?.trim().toLowerCase();
   if (value === "1" || value === "true" || value === "yes" || value === "on") {
     return true;
@@ -172,13 +177,18 @@ function autoGenerationProvider(): GenerationProviderMode {
 export const defaultGeminiModel = "gemini-3.8-flash";
 
 function snapshotSettings(): ProviderRuntimeSettings {
+  // No modo demonstracao tudo passa pelo simulado; as escolhas salvas ficam
+  // guardadas e voltam quando o modo e desligado.
+  const demoMode = demoModeEnabled();
   return {
-    transcriptionProvider:
-      envTranscriptionProvider() ??
-      cachedSettings.transcriptionProvider ??
-      autoTranscriptionProvider(),
-    generationProvider:
-      envGenerationProvider() ?? cachedSettings.generationProvider ?? autoGenerationProvider(),
+    transcriptionProvider: demoMode
+      ? "mock"
+      : (envTranscriptionProvider() ??
+        cachedSettings.transcriptionProvider ??
+        autoTranscriptionProvider()),
+    generationProvider: demoMode
+      ? "mock"
+      : (envGenerationProvider() ?? cachedSettings.generationProvider ?? autoGenerationProvider()),
     assistantWebSearch: envAssistantWebSearchMode() ?? cachedSettings.assistantWebSearch ?? "auto",
     ollamaBaseUrl: normalizeProviderUrl(
       serverEnv("OLLAMA_BASE_URL") ?? cachedSettings.ollamaBaseUrl,
@@ -199,6 +209,7 @@ function snapshotSettings(): ProviderRuntimeSettings {
       serverEnv("FASTER_WHISPER_MODEL") ?? cachedSettings.fasterWhisperModel,
       "small",
     ),
+    demoMode,
     updatedAt: cachedUpdatedAt ?? now(),
   };
 }
@@ -242,9 +253,11 @@ function transcriptionCatalog(): ProviderCatalogItem[] {
       kind: "transcription",
       availability: "development_only",
       description: "Usa transcricao simulada apenas para desenvolvimento e testes controlados.",
-      reason: simulatedEnabled
-        ? "Modo simulado habilitado por EDUCAI_ENABLE_SIMULATED_PROVIDERS."
-        : "Ative EDUCAI_ENABLE_SIMULATED_PROVIDERS=true apenas em desenvolvimento.",
+      reason: demoModeEnabled()
+        ? "Modo demonstracao ligado nas configuracoes."
+        : simulatedEnabled
+          ? "Modo simulado habilitado por EDUCAI_ENABLE_SIMULATED_PROVIDERS."
+          : "Ligue o modo demonstracao ou EDUCAI_ENABLE_SIMULATED_PROVIDERS=true.",
       selectable: simulatedEnabled,
     },
     {
@@ -296,9 +309,11 @@ function generationCatalog(): ProviderCatalogItem[] {
       kind: "generation",
       availability: "development_only",
       description: "Gera materiais e respostas simuladas apenas para desenvolvimento e testes.",
-      reason: simulatedEnabled
-        ? "Modo simulado habilitado por EDUCAI_ENABLE_SIMULATED_PROVIDERS."
-        : "Ative EDUCAI_ENABLE_SIMULATED_PROVIDERS=true apenas em desenvolvimento.",
+      reason: demoModeEnabled()
+        ? "Modo demonstracao ligado nas configuracoes."
+        : simulatedEnabled
+          ? "Modo simulado habilitado por EDUCAI_ENABLE_SIMULATED_PROVIDERS."
+          : "Ligue o modo demonstracao ou EDUCAI_ENABLE_SIMULATED_PROVIDERS=true.",
       selectable: simulatedEnabled,
     },
     {
@@ -375,6 +390,9 @@ export async function ensureProviderRuntimeConfigLoaded() {
       if (typeof parsed.settings.fasterWhisperModel === "string") {
         nextSettings.fasterWhisperModel = parsed.settings.fasterWhisperModel.trim();
       }
+      if (typeof parsed.settings.demoMode === "boolean") {
+        nextSettings.demoMode = parsed.settings.demoMode;
+      }
 
       cachedSettings = nextSettings;
       cachedUpdatedAt = parsed.savedAt;
@@ -404,7 +422,15 @@ export async function updateProviderRuntimeConfig(
 ): Promise<ProviderRuntimeSettingsEnvelope> {
   await ensureProviderRuntimeConfigLoaded();
   const nextSettings = { ...cachedSettings };
-  const simulatedEnabled = simulatedProvidersEnabled();
+
+  if (patch.demoMode !== undefined) {
+    if (typeof patch.demoMode !== "boolean") {
+      throw new Error("Invalid demo mode value.");
+    }
+    nextSettings.demoMode = patch.demoMode;
+  }
+
+  const simulatedEnabled = nextSettings.demoMode === true || simulatedProvidersEnabled();
 
   if (patch.transcriptionProvider !== undefined) {
     if (!isTranscriptionProviderMode(patch.transcriptionProvider)) {

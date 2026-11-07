@@ -96,6 +96,7 @@ export const emptyProviderConfig: ProviderRuntimeSettingsEnvelope = {
     geminiModel: "gemini-3.8-flash",
     fasterWhisperBaseUrl: "http://localhost:8765",
     fasterWhisperModel: "small",
+    demoMode: false,
     updatedAt: "",
   },
   catalog: {

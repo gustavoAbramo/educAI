@@ -731,6 +731,34 @@ describe("V1 API integration flow", () => {
     });
   });
 
+  it("demo mode forces simulated providers and restores saved choices when turned off", async () => {
+    const patch = (body: Record<string, unknown>) =>
+      api("PATCH", "/api/v1/settings/providers", {
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const settingsOf = (result: Awaited<ReturnType<typeof patch>>) =>
+      (result.json.data as Record<string, unknown>).settings as Record<string, unknown>;
+
+    // A transcricao fica fixa em "mock" pelo env da suite; a geracao nao.
+    await patch({ generationProvider: "ollama" });
+
+    const on = await patch({ demoMode: true });
+    assert.equal(on.response.status, 200);
+    assert.equal(settingsOf(on).demoMode, true);
+    assert.equal(settingsOf(on).transcriptionProvider, "mock");
+    assert.equal(settingsOf(on).generationProvider, "mock");
+
+    const off = await patch({ demoMode: false });
+    assert.equal(settingsOf(off).demoMode, false);
+    assert.equal(settingsOf(off).generationProvider, "ollama");
+
+    const invalid = await patch({ demoMode: "sim" });
+    assert.equal(invalid.response.status, 400);
+
+    await patch({ generationProvider: "mock" });
+  });
+
   it("checks Faster-Whisper runtime status through the API", async () => {
     const originalFetch = globalThis.fetch;
 
