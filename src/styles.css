@@ -263,13 +263,15 @@
   display: none;
 }
 
-/* Na landing quem rola e a pagina inteira: esconde a barra da janela so enquanto ela esta na tela. */
-html:has(.landing) {
+/* Esconde a barra de rolagem da janela em todo o site (landing, login,
+   cadastro, termos); a rolagem continua funcionando. Nas telas internas quem
+   rola e o <main> do app-shell, que usa .no-scrollbar. */
+html {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
-html:has(.landing)::-webkit-scrollbar {
+html::-webkit-scrollbar {
   display: none;
 }
 

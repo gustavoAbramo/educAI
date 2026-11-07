@@ -278,7 +278,7 @@ export function AppShell() {
         <main
           id="conteudo"
           tabIndex={-1}
-          className="relative flex-1 overflow-auto bg-black/[0.02] outline-none dark:bg-white/[0.02]"
+          className="no-scrollbar relative flex-1 overflow-auto bg-black/[0.02] outline-none dark:bg-white/[0.02]"
         >
           <Outlet />
         </main>
