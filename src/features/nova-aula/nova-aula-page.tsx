@@ -81,17 +81,9 @@ export function NovaAula() {
   const [level, setLevel] = useState("Intermediário");
   const [objectives, setObjectives] = useState("");
   const [context, setContext] = useState("");
-  const [outputs, setOutputs] = useState<string[]>([
-    "Resumo",
-    "Relatório técnico",
-    "Tópicos",
-    "Mapa mental",
-    "Diagnostico da aula",
-    "Resumo executivo",
-    "Respostas sugeridas",
-  ]);
-  const [summaryStyle, setSummaryStyle] = useState("Para alunos");
-  const [tone, setTone] = useState("Didático");
+  const [outputs, setOutputs] = useState<string[]>([]);
+  const [summaryStyle, setSummaryStyle] = useState("");
+  const [tone, setTone] = useState("");
   const [language, setLanguage] = useState(defaultLanguage);
   const [avoidTopics, setAvoidTopics] = useState("");
   const [expectedDuration, setExpectedDuration] = useState("");
@@ -156,7 +148,7 @@ export function NovaAula() {
         title: trimmedTitle,
         type: sessionType,
         language,
-        summaryTemplate: summaryStyle,
+        summaryTemplate: summaryStyle || undefined,
         metadata,
       });
 
