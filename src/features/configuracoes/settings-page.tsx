@@ -1,28 +1,39 @@
 import { Link, getRouteApi } from "@tanstack/react-router";
 import {
   Accessibility,
-  Bot,
+  ChevronDown,
   ChevronRight,
   Copy,
+  ListChecks,
   Loader2,
   Moon,
+  PlugZap,
   RefreshCw,
   Search,
   ShieldCheck,
   Sun,
-  Waves,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { BackButton } from "@/components/back-button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type {
   AssistantWebSearchMode,
   AppSettingsCenterEnvelope,
   AppSettingsPatch,
   AppSettingsValidationEnvelope,
+  CloudProviderConnectionStatus,
   FasterWhisperConnectionStatus,
   GenerationProviderMode,
   OllamaConnectionStatus,
+  ProviderRuntimeCheck,
   ProviderRuntimeHealthEnvelope,
   ProviderRuntimeHealthHistoryEnvelope,
   ProviderRuntimeSettingsEnvelope,
@@ -66,11 +77,12 @@ import {
   browserCaptureStatus,
   browserCaptureStatusDetail,
   fasterWhisperToastLabel,
-  fasterWhisperShortLabel,
   fasterWhisperSmokeCheck,
   capabilityStatusLabel,
   capabilityStatusTone,
   capabilityProviderLabel,
+  connectionStatusLabel,
+  connectionStatusTone,
   offlineStatusLabel,
   offlineStatusTone,
   setupStepLabel,
@@ -79,6 +91,24 @@ import {
 } from "./model/status-labels";
 
 const routeApi = getRouteApi("/configuracoes");
+
+type ConnectionTestProvider = "gemini" | "openai" | "ollama" | "faster-whisper";
+
+type ConnectionTestResult = {
+  provider: ConnectionTestProvider;
+  status: string;
+  message: string;
+  latencyMs?: number;
+  checkedAt: string;
+  checks: ProviderRuntimeCheck[];
+};
+
+const connectionProviders: { id: ConnectionTestProvider; label: string }[] = [
+  { id: "gemini", label: "Gemini" },
+  { id: "openai", label: "OpenAI" },
+  { id: "ollama", label: "Ollama" },
+  { id: "faster-whisper", label: "Faster-Whisper" },
+];
 
 export function SettingsPage() {
   const { canManageSettings } = routeApi.useRouteContext();
@@ -159,6 +189,8 @@ function Configuracoes() {
   const [supabaseServiceKeyDraft, setSupabaseServiceKeyDraft] = useState("");
   const [ollamaTesting, setOllamaTesting] = useState(false);
   const [fasterWhisperTesting, setFasterWhisperTesting] = useState(false);
+  const [connectionTesting, setConnectionTesting] = useState<ConnectionTestProvider[]>([]);
+  const [connectionResults, setConnectionResults] = useState<ConnectionTestResult[]>([]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof navigator === "undefined") return;
@@ -461,14 +493,15 @@ function Configuracoes() {
     );
   };
 
-  const testOllamaConnection = async (options: { notify?: boolean } = {}) => {
+  const testOllamaConnection = async (
+    options: { notify?: boolean } = {},
+  ): Promise<OllamaConnectionStatus> => {
     setOllamaTesting(true);
 
     try {
       const response = await fetch("/api/v1/settings/providers/ollama/status");
       const data = await readApiJson<OllamaConnectionStatus>(response);
       setOllamaStatus(data);
-      await loadRuntimeHealth();
       if (options.notify) {
         toast.success(
           data.status === "ready"
@@ -478,11 +511,14 @@ function Configuracoes() {
               : "Status do Ollama atualizado",
         );
       }
+      return data;
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Nao foi possivel testar a conexao com o Ollama.";
-      setOllamaStatus((current) => ({
-        ...current,
+      const fallback: OllamaConnectionStatus = {
+        provider: "ollama",
+        baseUrl: providerConfig.settings.ollamaBaseUrl,
+        model: providerConfig.settings.ollamaModel,
         checkedAt: new Date().toISOString(),
         status: "unreachable",
         reachable: false,
@@ -498,40 +534,40 @@ function Configuracoes() {
           },
         ],
         message,
-      }));
+      };
+      setOllamaStatus(fallback);
       if (options.notify) {
         toast.error("Falha ao testar Ollama", { description: message });
       }
+      return fallback;
     } finally {
       setOllamaTesting(false);
     }
   };
 
-  const testFasterWhisperConnection = async (options: { notify?: boolean } = {}) => {
+  const testFasterWhisperConnection = async (
+    options: { notify?: boolean } = {},
+  ): Promise<FasterWhisperConnectionStatus> => {
     setFasterWhisperTesting(true);
 
     try {
       const response = await fetch("/api/v1/settings/providers/faster-whisper/status");
       const data = await readApiJson<FasterWhisperConnectionStatus>(response);
       setFasterWhisperStatus(data);
-      await loadRuntimeHealth();
       if (options.notify) {
         toast.success(fasterWhisperToastLabel(data.status));
       }
+      return data;
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : "Nao foi possivel testar a conexao com o Faster-Whisper.";
-      setFasterWhisperStatus((current) => ({
-        ...current,
+      const fallback: FasterWhisperConnectionStatus = {
+        ...emptyFasterWhisperStatus,
+        baseUrl: providerConfig.settings.fasterWhisperBaseUrl,
+        model: providerConfig.settings.fasterWhisperModel,
         checkedAt: new Date().toISOString(),
-        status: "unreachable",
-        reachable: false,
-        activeModelAvailable: false,
-        availableModels: [],
-        smokeTranscriptionReady: false,
-        smokeDiarizationReady: false,
         checks: [
           {
             id: "endpoint",
@@ -541,12 +577,98 @@ function Configuracoes() {
           },
         ],
         message,
-      }));
+      };
+      setFasterWhisperStatus(fallback);
       if (options.notify) {
         toast.error("Falha ao testar Faster-Whisper", { description: message });
       }
+      return fallback;
     } finally {
       setFasterWhisperTesting(false);
+    }
+  };
+
+  const toConnectionResult = (
+    data: OllamaConnectionStatus | FasterWhisperConnectionStatus,
+  ): ConnectionTestResult => ({
+    provider: data.provider,
+    status: data.status,
+    message: data.message,
+    latencyMs: data.latencyMs,
+    checkedAt: data.checkedAt,
+    checks: data.checks,
+  });
+
+  const runConnectionTest = async (providers: ConnectionTestProvider[]) => {
+    if (providers.length === 0) return;
+
+    setConnectionTesting(providers);
+
+    try {
+      const settled = await Promise.allSettled(
+        providers.map(async (provider): Promise<ConnectionTestResult> => {
+          if (provider === "gemini" || provider === "openai") {
+            const response = await fetch(`/api/v1/settings/providers/${provider}/status`);
+            const data = await readApiJson<CloudProviderConnectionStatus>(response);
+            return {
+              provider,
+              status: data.status,
+              message: data.message,
+              latencyMs: data.latencyMs,
+              checkedAt: data.checkedAt,
+              checks: data.checks,
+            };
+          }
+
+          const data =
+            provider === "ollama"
+              ? await testOllamaConnection()
+              : await testFasterWhisperConnection();
+          return toConnectionResult(data);
+        }),
+      );
+
+      const results: ConnectionTestResult[] = settled.map((item, index) => {
+        if (item.status === "fulfilled") return item.value;
+
+        return {
+          provider: providers[index],
+          status: "unreachable",
+          message:
+            item.reason instanceof Error
+              ? item.reason.message
+              : "Nao foi possivel testar a conexao.",
+          checkedAt: new Date().toISOString(),
+          checks: [],
+        };
+      });
+
+      setConnectionResults((current) => {
+        const byProvider = new Map<ConnectionTestProvider, ConnectionTestResult>();
+        for (const result of current) byProvider.set(result.provider, result);
+        for (const result of results) byProvider.set(result.provider, result);
+        return connectionProviders
+          .map((provider) => byProvider.get(provider.id))
+          .filter((item): item is ConnectionTestResult => Boolean(item));
+      });
+
+      await loadRuntimeHealth();
+
+      const readyCount = results.filter((result) => result.status === "ready").length;
+      const summary = `${readyCount} de ${results.length} conexao(oes) pronta(s).`;
+
+      if (readyCount === results.length) {
+        toast.success(
+          providers.length === 1
+            ? `${connectionProviders.find((item) => item.id === providers[0])?.label ?? "Provedor"} conectado`
+            : "Todas as conexoes estao prontas",
+          { description: summary },
+        );
+      } else {
+        toast.error("Alguma conexao precisa de atencao", { description: summary });
+      }
+    } finally {
+      setConnectionTesting([]);
     }
   };
 
@@ -916,6 +1038,115 @@ function Configuracoes() {
                 </div>
               </Section>
 
+              <Section
+                title="Teste de conexão"
+                description="Valide credencial, modelo e disponibilidade de cada provedor."
+              >
+                <Row
+                  title="Testar conexões"
+                  desc="Escolha um provedor no menu ou valide todos de uma vez."
+                >
+                  <div className="flex w-full flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          disabled={
+                            connectionTesting.length > 0 || providerLoading || providerSaving
+                          }
+                          className={secondaryButtonClassName}
+                        >
+                          {connectionTesting.length > 0 ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <PlugZap className="h-4 w-4" />
+                          )}
+                          Escolher provedor
+                          <ChevronDown className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuLabel>Testar qual conexão?</DropdownMenuLabel>
+                        {connectionProviders.map((provider) => (
+                          <DropdownMenuItem
+                            key={provider.id}
+                            onSelect={() => void runConnectionTest([provider.id])}
+                          >
+                            {provider.label}
+                          </DropdownMenuItem>
+                        ))}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onSelect={() =>
+                            void runConnectionTest(connectionProviders.map((item) => item.id))
+                          }
+                        >
+                          Testar todas
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void runConnectionTest(connectionProviders.map((item) => item.id))
+                      }
+                      disabled={connectionTesting.length > 0 || providerLoading || providerSaving}
+                      className={secondaryButtonClassName}
+                    >
+                      {connectionTesting.length > 0 ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ListChecks className="h-4 w-4" />
+                      )}
+                      Testar todas
+                    </button>
+                  </div>
+                </Row>
+
+                {connectionResults.length > 0 ? (
+                  <div className="grid gap-3 p-5">
+                    {connectionResults.map((result) => (
+                      <div
+                        key={result.provider}
+                        className="rounded-xl border border-border/70 bg-background/60 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-sm font-medium">
+                              {capabilityProviderLabel(result.provider)}
+                            </div>
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              {result.message}
+                            </div>
+                          </div>
+                          <span
+                            className={`shrink-0 rounded-full border px-2 py-1 text-[11px] font-medium ${connectionStatusTone(result.status)}`}
+                          >
+                            {connectionStatusLabel(result.status)}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                          {typeof result.latencyMs === "number" ? (
+                            <span>Latência: {result.latencyMs}ms</span>
+                          ) : null}
+                          {result.checkedAt ? (
+                            <span>
+                              Verificado em {new Date(result.checkedAt).toLocaleString("pt-BR")}
+                            </span>
+                          ) : null}
+                        </div>
+                        {result.provider === "gemini" || result.provider === "openai" ? (
+                          <div className="mt-3">
+                            <ProviderChecks checks={result.checks} />
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </Section>
+
               <Section title="Ollama" description="IA local e gratuita, rodando no seu computador.">
                 <Row
                   title="URL do Ollama"
@@ -970,34 +1201,6 @@ function Configuracoes() {
                     >
                       Salvar
                     </button>
-                  </div>
-                </Row>
-
-                <Row
-                  title="Teste de conexao do Ollama"
-                  desc="Valida se o endpoint responde e se o modelo configurado existe no runtime local."
-                >
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void testOllamaConnection({ notify: true })}
-                      disabled={ollamaTesting || providerLoading || providerSaving}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 text-sm transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {ollamaTesting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Bot className="h-4 w-4" />
-                      )}
-                      Testar conexao
-                    </button>
-                    <span className="text-xs text-muted-foreground">
-                      {ollamaStatus.status === "ready"
-                        ? "Endpoint pronto"
-                        : ollamaStatus.status === "model_missing"
-                          ? "Endpoint responde, modelo ausente"
-                          : "Sem conexao validada"}
-                    </span>
                   </div>
                 </Row>
               </Section>
@@ -1196,30 +1399,6 @@ function Configuracoes() {
                     >
                       Salvar
                     </button>
-                  </div>
-                </Row>
-
-                <Row
-                  title="Teste de conexao do Faster-Whisper"
-                  desc="Valida se o worker responde e se o modelo configurado existe no runtime local."
-                >
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void testFasterWhisperConnection({ notify: true })}
-                      disabled={fasterWhisperTesting || providerLoading || providerSaving}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 text-sm transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {fasterWhisperTesting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Waves className="h-4 w-4" />
-                      )}
-                      Testar conexao
-                    </button>
-                    <span className="text-xs text-muted-foreground">
-                      {fasterWhisperShortLabel(fasterWhisperStatus.status)}
-                    </span>
                   </div>
                 </Row>
               </Section>

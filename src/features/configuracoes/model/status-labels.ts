@@ -162,6 +162,38 @@ export function capabilityProviderLabel(provider: string) {
   return provider;
 }
 
+export function connectionStatusLabel(status: string) {
+  if (status === "ready") return "Pronto";
+  if (status === "missing_key") return "Chave ausente";
+  if (status === "invalid_key") return "Chave invalida";
+  if (status === "model_unavailable") return "Modelo indisponivel";
+  if (status === "model_missing") return "Modelo ausente";
+  if (status === "quota_exceeded") return "Cota excedida";
+  if (status === "mock_mode") return "Modo simulado";
+  if (status === "misconfigured") return "Incompleto";
+  if (status === "unreachable") return "Sem conexao";
+  return status;
+}
+
+export function connectionStatusTone(status: string) {
+  if (status === "ready") {
+    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+  }
+  if (status === "mock_mode") {
+    return "border-zinc-500/30 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300";
+  }
+  if (
+    status === "missing_key" ||
+    status === "model_unavailable" ||
+    status === "model_missing" ||
+    status === "quota_exceeded" ||
+    status === "misconfigured"
+  ) {
+    return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
+  }
+  return "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300";
+}
+
 export function offlineStatusLabel(
   status: ProviderRuntimeHealthEnvelope["offlineReadiness"]["status"],
 ) {

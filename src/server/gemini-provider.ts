@@ -27,15 +27,17 @@ function apiKey() {
   return getConfiguredSecret("GEMINI_API_KEY")?.trim();
 }
 
-function transcriptionModel() {
-  return serverEnv("GEMINI_TRANSCRIBE_MODEL")?.trim() || "gemini-3.8-flash";
+const defaultGeminiModel = "gemini-3.6-flash";
+
+export function geminiTranscriptionModel() {
+  return serverEnv("GEMINI_TRANSCRIBE_MODEL")?.trim() || defaultGeminiModel;
 }
 
-function insightsModel() {
+export function geminiInsightsModel() {
   return (
     serverEnv("GEMINI_INSIGHTS_MODEL")?.trim() ||
     serverEnv("GEMINI_TRANSCRIBE_MODEL")?.trim() ||
-    "gemini-3.8-flash"
+    defaultGeminiModel
   );
 }
 
@@ -141,7 +143,7 @@ export async function generateMaterialsWithGemini(
 ): Promise<CallMaterials | undefined> {
   if (!apiKey()) return undefined;
 
-  const model = insightsModel();
+  const model = geminiInsightsModel();
   const result = await geminiFetch(model, {
     generationConfig: {
       responseMimeType: "application/json",
@@ -183,7 +185,7 @@ export async function transcribeRecordingWithGemini(
   const stored = await readStoredRecording(recording);
   if (!stored) return undefined;
 
-  const model = transcriptionModel();
+  const model = geminiTranscriptionModel();
   const result = await geminiFetch(model, {
     contents: [
       {
@@ -235,7 +237,7 @@ export async function answerGeneralAssistantWithGemini(
 ): Promise<string | undefined> {
   if (!apiKey()) return undefined;
 
-  const model = insightsModel();
+  const model = geminiInsightsModel();
   const result = await geminiFetch(model, {
     contents: [
       {
@@ -258,7 +260,7 @@ export async function answerChatWithGemini(
 ): Promise<ChatResponse | undefined> {
   if (!apiKey() || !record.transcript) return undefined;
 
-  const model = insightsModel();
+  const model = geminiInsightsModel();
   const result = await geminiFetch(model, {
     contents: [
       {

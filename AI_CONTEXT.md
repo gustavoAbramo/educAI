@@ -108,8 +108,8 @@ EDUCAI_DEBUG_PROVIDERS=true | false
 OPENAI_API_KEY=sk-...
 OPENAI_TRANSCRIBE_MODEL=gpt-4o-transcribe
 GEMINI_API_KEY=...
-GEMINI_TRANSCRIBE_MODEL=gemini-3.8-flash
-GEMINI_INSIGHTS_MODEL=gemini-3.8-flash
+GEMINI_TRANSCRIBE_MODEL=gemini-3.6-flash
+GEMINI_INSIGHTS_MODEL=gemini-3.6-flash
 ```
 
 Comportamento atual:
@@ -178,13 +178,20 @@ efetiva das capacidades de transcricao, materiais, chat e assistente, alem dos
 status operacionais de Ollama e Faster-Whisper. A tela de configuracoes deve
 refletir essa leitura em vez de mostrar apenas selecao de provider.
 
+O teste manual de conexao fica centralizado na aba de IA: o usuario escolhe
+Gemini, OpenAI, Ollama ou Faster-Whisper, ou dispara "Testar todas". Gemini e
+OpenAI usam `GET /api/v1/settings/providers/gemini/status` e
+`GET /api/v1/settings/providers/openai/status`, que fazem uma chamada real e
+redigem a chave em qualquer mensagem de erro. Ollama e Faster-Whisper continuam
+usando seus endpoints `/status` existentes.
+
 Em modo real:
 
 - `EDUCAI_TRANSCRIPTION_PROVIDER=openai` usa OpenAI tambem para materiais.
 - `EDUCAI_TRANSCRIPTION_PROVIDER=gemini` usa Gemini tambem para materiais.
 - `GEMINI_INSIGHTS_MODEL` pode separar o modelo de geracao de materiais do
   modelo de transcricao. Se nao for definido, o sistema reutiliza
-  `GEMINI_TRANSCRIBE_MODEL` e depois cai em `gemini-3.8-flash`.
+  `GEMINI_TRANSCRIBE_MODEL` e depois cai em `gemini-3.6-flash`.
 - Falha real de geracao de materiais nao deve ser mascarada por material mock.
 
 A tela `src/features/resultado/` deve consumir transcricao, materiais e chat da

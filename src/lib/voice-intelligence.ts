@@ -147,6 +147,27 @@ export type FasterWhisperConnectionStatus = {
   message: string;
 };
 
+export type CloudProviderId = "gemini" | "openai";
+
+export type CloudProviderConnectionStatusValue =
+  | "ready"
+  | "missing_key"
+  | "invalid_key"
+  | "model_unavailable"
+  | "quota_exceeded"
+  | "unreachable";
+
+export type CloudProviderConnectionStatus = {
+  provider: CloudProviderId;
+  checkedAt: string;
+  status: CloudProviderConnectionStatusValue;
+  configured: boolean;
+  model: string;
+  latencyMs: number;
+  checks: ProviderRuntimeCheck[];
+  message: string;
+};
+
 export type ProviderRuntimeSettingsEnvelope = {
   settings: ProviderRuntimeSettings;
   catalog: {

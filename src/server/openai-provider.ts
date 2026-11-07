@@ -27,11 +27,11 @@ function apiKey() {
   return getConfiguredSecret("OPENAI_API_KEY");
 }
 
-function transcriptionModel() {
+export function openAITranscriptionModel() {
   return serverEnv("OPENAI_TRANSCRIBE_MODEL") ?? "gpt-4o-transcribe";
 }
 
-function insightsModel() {
+export function openAIInsightsModel() {
   return serverEnv("OPENAI_INSIGHTS_MODEL") ?? "gpt-4o-mini";
 }
 
@@ -69,7 +69,7 @@ export async function transcribeRecordingWithOpenAI(
   const form = new FormData();
   const audio = new Blob([stored.bytes as BlobPart], { type: stored.mimeType });
   form.append("file", audio, stored.fileName);
-  form.append("model", transcriptionModel());
+  form.append("model", openAITranscriptionModel());
   form.append("response_format", "json");
 
   const language = normalizeLanguage(session.language);
@@ -109,7 +109,7 @@ export async function transcribeRecordingWithOpenAI(
     format: "TEXT",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    provider: `openai:${transcriptionModel()}`,
+    provider: `openai:${openAITranscriptionModel()}`,
   };
 }
 
@@ -144,7 +144,7 @@ export async function generateMaterialsWithOpenAI(
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: insightsModel(),
+      model: openAIInsightsModel(),
       instructions: [
         "You analyze transcripts for a Fireflies-style education and meeting intelligence API.",
         "Return high-signal, production-ready materials.",
@@ -182,7 +182,7 @@ export async function generateMaterialsWithOpenAI(
   if (!output) return undefined;
 
   const parsed = JSON.parse(output) as OpenAIJson;
-  return callMaterialsFromGeneratedPayload(session, parsed, `openai:${insightsModel()}`);
+  return callMaterialsFromGeneratedPayload(session, parsed, `openai:${openAIInsightsModel()}`);
 }
 
 export async function answerChatWithOpenAI(
@@ -198,7 +198,7 @@ export async function answerChatWithOpenAI(
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: insightsModel(),
+      model: openAIInsightsModel(),
       instructions: [
         "Answer questions about a session using only the transcript, generated materials, and session context.",
         "Be direct and mention when the transcript does not contain enough evidence.",
@@ -259,7 +259,7 @@ export async function answerGeneralAssistantWithOpenAI(
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: insightsModel(),
+      model: openAIInsightsModel(),
       instructions,
       ...(include ? { include } : {}),
       ...(options?.useWebSearch
@@ -339,7 +339,7 @@ export async function answerGeneralAssistantWithOpenAIWebSearch(
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: insightsModel(),
+      model: openAIInsightsModel(),
       instructions,
       include: ["web_search_call.results"],
       tools: [

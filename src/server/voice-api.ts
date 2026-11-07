@@ -20,6 +20,7 @@ import type {
 } from "@/lib/voice-intelligence";
 import { getFasterWhisperConnectionStatus } from "./faster-whisper-provider";
 import { canManageSettings, type WorkspaceSession } from "./auth";
+import { getGeminiConnectionStatus, getOpenAIConnectionStatus } from "./cloud-provider-status";
 import { persistRecordingUpload, type PendingRecordingUpload } from "./local-recordings";
 import { getOllamaConnectionStatus } from "./ollama-provider";
 import { answerAssistantMessage, type AssistantRespondRequest } from "./assistant-service";
@@ -779,6 +780,16 @@ export async function handleVoiceApiRequest(
 
       if (route.parts[2] === "ollama" && route.parts[3] === "status" && request.method === "GET") {
         const data: OllamaConnectionStatus = await getOllamaConnectionStatus();
+        return json({ data });
+      }
+
+      if (route.parts[2] === "gemini" && route.parts[3] === "status" && request.method === "GET") {
+        const data = await getGeminiConnectionStatus();
+        return json({ data });
+      }
+
+      if (route.parts[2] === "openai" && route.parts[3] === "status" && request.method === "GET") {
+        const data = await getOpenAIConnectionStatus();
         return json({ data });
       }
 
