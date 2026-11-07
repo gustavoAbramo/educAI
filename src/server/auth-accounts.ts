@@ -1,15 +1,17 @@
 import { createHash, randomUUID } from "node:crypto";
-import { link, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { link, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { serverEnv } from "./runtime-env";
 
 export type AuthAccount = { id: string; email: string; password_hash: string };
 
+function accountsDirectory() {
+  return serverEnv("EDUCAI_AUTH_ACCOUNTS_DIR") ?? join(process.cwd(), ".data", "accounts");
+}
+
 function accountPath(email: string) {
-  const directory =
-    serverEnv("EDUCAI_AUTH_ACCOUNTS_DIR") ?? join(process.cwd(), ".data", "accounts");
   const key = createHash("sha256").update(email).digest("hex");
-  return join(directory, `${key}.json`);
+  return join(accountsDirectory(), `${key}.json`);
 }
 
 function supabaseAccounts() {
@@ -47,6 +49,89 @@ export async function findAuthAccount(email: string): Promise<AuthAccount | unde
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
     throw error;
   }
+}
+
+// O token de sessao guarda so o id da conta; os arquivos locais sao
+// indexados pelo e-mail, entao aqui a busca percorre a pasta.
+export async function findAuthAccountById(id: string): Promise<AuthAccount | undefined> {
+  const remote = supabaseAccounts();
+  if (remote) {
+    const url = new URL(remote.url);
+    url.searchParams.set("id", `eq.${id}`);
+    const response = await fetch(url, {
+      headers: remote.headers,
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) throw new Error(`Account lookup failed (${response.status}).`);
+    const accounts = (await response.json()) as AuthAccount[];
+    return accounts[0];
+  }
+
+  let files: string[];
+  try {
+    files = await readdir(accountsDirectory());
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+  for (const file of files) {
+    if (!file.endsWith(".json")) continue;
+    try {
+      const account = JSON.parse(
+        await readFile(join(accountsDirectory(), file), "utf8"),
+      ) as AuthAccount;
+      if (account.id === id) return account;
+    } catch {
+      // Arquivo temporario ou corrompido: ignora e segue procurando.
+    }
+  }
+  return undefined;
+}
+
+export async function updateAuthAccountPassword(account: AuthAccount, passwordHash: string) {
+  const remote = supabaseAccounts();
+  if (remote) {
+    const url = new URL(remote.url);
+    url.searchParams.set("id", `eq.${account.id}`);
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: remote.headers,
+      body: JSON.stringify({ password_hash: passwordHash }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) throw new Error(`Password update failed (${response.status}).`);
+    return;
+  }
+
+  const destination = accountPath(account.email);
+  const temporary = `${destination}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporary, JSON.stringify({ ...account, password_hash: passwordHash }), {
+      flag: "wx",
+      mode: 0o600,
+      flush: true,
+    });
+    await rename(temporary, destination);
+  } finally {
+    await rm(temporary, { force: true }).catch(() => undefined);
+  }
+}
+
+export async function deleteAuthAccount(account: AuthAccount) {
+  const remote = supabaseAccounts();
+  if (remote) {
+    const url = new URL(remote.url);
+    url.searchParams.set("id", `eq.${account.id}`);
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: remote.headers,
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) throw new Error(`Account deletion failed (${response.status}).`);
+    return;
+  }
+
+  await rm(accountPath(account.email), { force: true });
 }
 
 export async function insertAuthAccount(account: AuthAccount) {

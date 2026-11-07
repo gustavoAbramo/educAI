@@ -9,6 +9,7 @@ import {
   handleAuthRequest,
   isSameOrigin,
 } from "./server/auth";
+import { handleAccountRequest } from "./server/account";
 import { setServerRuntimeEnv } from "./server/runtime-env";
 import { handleVoiceApiRequest } from "./server/voice-api";
 
@@ -90,6 +91,9 @@ export default {
       if (privateApi && !session) return authRequired();
       if (privateApi && !readMethods.has(request.method) && !isSameOrigin(request)) {
         return forbiddenOrigin();
+      }
+      if (session && /^\/api\/v1\/account(\/|$)/.test(url.pathname)) {
+        return await handleAccountRequest(request, url, session);
       }
       const apiResponse = await handleVoiceApiRequest(request, session ?? undefined);
       if (apiResponse) {

@@ -88,6 +88,9 @@ export const apiClient = {
     delete<T>(path: string) {
         return request<T>(path, { method: "DELETE" });
     },
+    deleteJson<T>(path: string, body: unknown) {
+        return request<T>(path, { method: "DELETE", body: JSON.stringify(body) });
+    },
 };
 
 export { baseUrl };

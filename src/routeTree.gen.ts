@@ -12,15 +12,18 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as ResultadoRouteImport } from './routes/resultado'
 import { Route as ProcessandoRouteImport } from './routes/processando'
+import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as PainelRouteImport } from './routes/painel'
 import { Route as NovaAulaRouteImport } from './routes/nova-aula'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LandingRouteImport } from './routes/landing'
 import { Route as HistoricoRouteImport } from './routes/historico'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AulaRouteImport } from './routes/aula'
 import { Route as AssistenteRouteImport } from './routes/assistente'
+import { Route as AjudaRouteImport } from './routes/ajuda'
 import { Route as AcessibilidadeRouteImport } from './routes/acessibilidade'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -37,6 +40,11 @@ const ResultadoRoute = ResultadoRouteImport.update({
 const ProcessandoRoute = ProcessandoRouteImport.update({
   id: '/processando',
   path: '/processando',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerfilRoute = PerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PainelRoute = PainelRouteImport.update({
@@ -69,6 +77,11 @@ const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
   path: '/configuracoes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CalendarioRoute = CalendarioRouteImport.update({
+  id: '/calendario',
+  path: '/calendario',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CadastroRoute = CadastroRouteImport.update({
   id: '/cadastro',
   path: '/cadastro',
@@ -82,6 +95,11 @@ const AulaRoute = AulaRouteImport.update({
 const AssistenteRoute = AssistenteRouteImport.update({
   id: '/assistente',
   path: '/assistente',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AjudaRoute = AjudaRouteImport.update({
+  id: '/ajuda',
+  path: '/ajuda',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcessibilidadeRoute = AcessibilidadeRouteImport.update({
@@ -98,15 +116,18 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/acessibilidade': typeof AcessibilidadeRoute
+  '/ajuda': typeof AjudaRoute
   '/assistente': typeof AssistenteRoute
   '/aula': typeof AulaRoute
   '/cadastro': typeof CadastroRoute
+  '/calendario': typeof CalendarioRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/historico': typeof HistoricoRoute
   '/landing': typeof LandingRoute
   '/login': typeof LoginRoute
   '/nova-aula': typeof NovaAulaRoute
   '/painel': typeof PainelRoute
+  '/perfil': typeof PerfilRoute
   '/processando': typeof ProcessandoRoute
   '/resultado': typeof ResultadoRoute
   '/termos': typeof TermosRoute
@@ -114,15 +135,18 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/acessibilidade': typeof AcessibilidadeRoute
+  '/ajuda': typeof AjudaRoute
   '/assistente': typeof AssistenteRoute
   '/aula': typeof AulaRoute
   '/cadastro': typeof CadastroRoute
+  '/calendario': typeof CalendarioRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/historico': typeof HistoricoRoute
   '/landing': typeof LandingRoute
   '/login': typeof LoginRoute
   '/nova-aula': typeof NovaAulaRoute
   '/painel': typeof PainelRoute
+  '/perfil': typeof PerfilRoute
   '/processando': typeof ProcessandoRoute
   '/resultado': typeof ResultadoRoute
   '/termos': typeof TermosRoute
@@ -131,15 +155,18 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/acessibilidade': typeof AcessibilidadeRoute
+  '/ajuda': typeof AjudaRoute
   '/assistente': typeof AssistenteRoute
   '/aula': typeof AulaRoute
   '/cadastro': typeof CadastroRoute
+  '/calendario': typeof CalendarioRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/historico': typeof HistoricoRoute
   '/landing': typeof LandingRoute
   '/login': typeof LoginRoute
   '/nova-aula': typeof NovaAulaRoute
   '/painel': typeof PainelRoute
+  '/perfil': typeof PerfilRoute
   '/processando': typeof ProcessandoRoute
   '/resultado': typeof ResultadoRoute
   '/termos': typeof TermosRoute
@@ -149,15 +176,18 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/acessibilidade'
+    | '/ajuda'
     | '/assistente'
     | '/aula'
     | '/cadastro'
+    | '/calendario'
     | '/configuracoes'
     | '/historico'
     | '/landing'
     | '/login'
     | '/nova-aula'
     | '/painel'
+    | '/perfil'
     | '/processando'
     | '/resultado'
     | '/termos'
@@ -165,15 +195,18 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/acessibilidade'
+    | '/ajuda'
     | '/assistente'
     | '/aula'
     | '/cadastro'
+    | '/calendario'
     | '/configuracoes'
     | '/historico'
     | '/landing'
     | '/login'
     | '/nova-aula'
     | '/painel'
+    | '/perfil'
     | '/processando'
     | '/resultado'
     | '/termos'
@@ -181,15 +214,18 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/acessibilidade'
+    | '/ajuda'
     | '/assistente'
     | '/aula'
     | '/cadastro'
+    | '/calendario'
     | '/configuracoes'
     | '/historico'
     | '/landing'
     | '/login'
     | '/nova-aula'
     | '/painel'
+    | '/perfil'
     | '/processando'
     | '/resultado'
     | '/termos'
@@ -198,15 +234,18 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AcessibilidadeRoute: typeof AcessibilidadeRoute
+  AjudaRoute: typeof AjudaRoute
   AssistenteRoute: typeof AssistenteRoute
   AulaRoute: typeof AulaRoute
   CadastroRoute: typeof CadastroRoute
+  CalendarioRoute: typeof CalendarioRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   HistoricoRoute: typeof HistoricoRoute
   LandingRoute: typeof LandingRoute
   LoginRoute: typeof LoginRoute
   NovaAulaRoute: typeof NovaAulaRoute
   PainelRoute: typeof PainelRoute
+  PerfilRoute: typeof PerfilRoute
   ProcessandoRoute: typeof ProcessandoRoute
   ResultadoRoute: typeof ResultadoRoute
   TermosRoute: typeof TermosRoute
@@ -233,6 +272,13 @@ declare module '@tanstack/react-router' {
       path: '/processando'
       fullPath: '/processando'
       preLoaderRoute: typeof ProcessandoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/perfil': {
+      id: '/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof PerfilRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/painel': {
@@ -277,6 +323,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/calendario': {
+      id: '/calendario'
+      path: '/calendario'
+      fullPath: '/calendario'
+      preLoaderRoute: typeof CalendarioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cadastro': {
       id: '/cadastro'
       path: '/cadastro'
@@ -296,6 +349,13 @@ declare module '@tanstack/react-router' {
       path: '/assistente'
       fullPath: '/assistente'
       preLoaderRoute: typeof AssistenteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ajuda': {
+      id: '/ajuda'
+      path: '/ajuda'
+      fullPath: '/ajuda'
+      preLoaderRoute: typeof AjudaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/acessibilidade': {
@@ -318,15 +378,18 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AcessibilidadeRoute: AcessibilidadeRoute,
+  AjudaRoute: AjudaRoute,
   AssistenteRoute: AssistenteRoute,
   AulaRoute: AulaRoute,
   CadastroRoute: CadastroRoute,
+  CalendarioRoute: CalendarioRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   HistoricoRoute: HistoricoRoute,
   LandingRoute: LandingRoute,
   LoginRoute: LoginRoute,
   NovaAulaRoute: NovaAulaRoute,
   PainelRoute: PainelRoute,
+  PerfilRoute: PerfilRoute,
   ProcessandoRoute: ProcessandoRoute,
   ResultadoRoute: ResultadoRoute,
   TermosRoute: TermosRoute,

@@ -1,4 +1,10 @@
 import { BackButton } from "@/components/back-button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatSessionMeta } from "@/lib/session-format";
 import {
   buildSessionSignalIntelligence,
@@ -29,8 +35,11 @@ import {
   Check,
   Download,
   FileQuestion,
+  ChevronDown,
   ChevronRight,
   ClipboardList,
+  Search,
+  X,
   Pencil,
   RotateCcw,
   Save,
@@ -54,7 +63,19 @@ import {
   liveAssistantSnapshotFromMetadata,
   assistantExchangesFromSnapshot,
 } from "./model/live-snapshot";
+import {
+  downloadTextFile,
+  markdownToHtmlDocument,
+  markdownToPlainText,
+  printHtmlDocument,
+} from "./model/export-formats";
 import { buildMarkdownExport } from "./model/markdown-export";
+import {
+  countMatches,
+  foldQuery,
+  textMatches,
+  TranscriptHighlight,
+} from "./components/transcript-highlight";
 import {
   materialByType,
   isTranscriptNewerThanMaterial,
@@ -107,6 +128,7 @@ export function Resultado() {
   const [transcriptLoading, setTranscriptLoading] = useState(false);
   const [transcriptError, setTranscriptError] = useState("");
   const [editingTranscript, setEditingTranscript] = useState(false);
+  const [transcriptQuery, setTranscriptQuery] = useState("");
   const [draftTranscriptSegments, setDraftTranscriptSegments] = useState<TranscriptSegment[]>([]);
   const [transcriptSaving, setTranscriptSaving] = useState(false);
   const [transcriptSaveError, setTranscriptSaveError] = useState("");
@@ -145,7 +167,7 @@ export function Resultado() {
       });
   };
 
-  const downloadMarkdownExport = () => {
+  const exportResult = (format: "md" | "txt" | "pdf" | "copy") => {
     if (!hasExportableContent) {
       toast.error("Nada para exportar ainda", {
         description: "Aguarde o carregamento da sessao ou gere materiais primeiro.",
@@ -162,7 +184,6 @@ export function Resultado() {
         .replace(/[^\p{L}\p{N}]+/gu, "-")
         .replace(/^-+|-+$/g, "")
         .slice(0, 64) || "resultado-da-sessao";
-    const fileName = `${safeTitle}-resultados.md`;
     const markdown = buildMarkdownExport({
       title: headerTitle,
       meta: [
@@ -183,15 +204,28 @@ export function Resultado() {
       transcriptSegments,
     });
 
-    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = fileName;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    if (format === "copy") {
+      copy(markdownToPlainText(markdown), "all");
+      return;
+    }
+    if (format === "pdf") {
+      printHtmlDocument(markdownToHtmlDocument(headerTitle, markdown));
+      toast.success("Abrindo impressão", {
+        description: 'Escolha "Salvar como PDF" como destino.',
+      });
+      return;
+    }
+    if (format === "txt") {
+      downloadTextFile(
+        `${safeTitle}-resultados.txt`,
+        markdownToPlainText(markdown),
+        "text/plain;charset=utf-8",
+      );
+      toast.success("Texto exportado");
+      return;
+    }
+
+    downloadTextFile(`${safeTitle}-resultados.md`, markdown, "text/markdown;charset=utf-8");
     toast.success("Markdown exportado", {
       description: "O arquivo foi gerado apenas com os dados realmente disponiveis nesta sessao.",
     });
@@ -541,9 +575,20 @@ export function Resultado() {
   const reportEvidence = technicalReportText
     ? reportEvidenceFromTranscript(technicalReportText, transcriptSegments)
     : [];
+  // A busca so vale fora do modo de edicao, para nao esconder trechos sendo editados.
+  const foldedTranscriptQuery = editingTranscript ? "" : foldQuery(transcriptQuery);
+  const transcriptMatchSegments = foldedTranscriptQuery
+    ? transcriptSegments.filter((segment) => textMatches(segment.text, foldedTranscriptQuery))
+    : transcriptSegments;
+  const transcriptMatchCount = foldedTranscriptQuery
+    ? transcriptMatchSegments.reduce(
+        (total, segment) => total + countMatches(segment.text, foldedTranscriptQuery),
+        0,
+      )
+    : 0;
   const visibleTranscriptSegments = editingTranscript
     ? draftTranscriptSegments
-    : transcriptSegments;
+    : transcriptMatchSegments;
   const latestRecording = recordings.at(-1);
   const microphoneRecording = recordings.find(
     (recording) => metadataString(recording.metadata, "sourceTrack") === "microphone",
@@ -719,26 +764,45 @@ export function Resultado() {
             </button>
           ) : null}
           <button
-            onClick={downloadMarkdownExport}
+            onClick={() => exportResult("copy")}
             disabled={isResultLoading || !hasExportableContent}
-            title={
-              hasExportableContent
-                ? "Exportar resultado em Markdown"
-                : "Aguarde os dados da sessao carregarem"
-            }
             className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 h-10 text-sm font-medium text-foreground shadow-soft hover:border-primary/40 hover:bg-muted active:scale-95 transition-all w-fit disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Download className="h-4 w-4" />
-            Exportar Markdown
+            {copied === "all" ? (
+              <Check className="h-4 w-4 text-primary" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+            {copied === "all" ? "Copiado" : "Copiar tudo"}
           </button>
-          <button
-            disabled
-            title="Exportacao de PDF indisponivel neste momento"
-            className="inline-flex items-center gap-2 rounded-xl bg-muted px-4 h-10 text-sm font-medium text-muted-foreground cursor-not-allowed w-fit"
-          >
-            <Download className="h-4 w-4" />
-            PDF indisponivel
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                disabled={isResultLoading || !hasExportableContent}
+                title={
+                  hasExportableContent
+                    ? "Baixar resumo, materiais e transcrição"
+                    : "Aguarde os dados da sessao carregarem"
+                }
+                className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 h-10 text-sm font-medium text-foreground shadow-soft hover:border-primary/40 hover:bg-muted active:scale-95 transition-all w-fit disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Download className="h-4 w-4" />
+                Exportar
+                <ChevronDown className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onSelect={() => exportResult("pdf")}>
+                PDF (imprimir)
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => exportResult("md")}>
+                Markdown (.md)
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => exportResult("txt")}>
+                Texto simples (.txt)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -1184,6 +1248,41 @@ export function Resultado() {
                 <option key={speaker} value={speaker} />
               ))}
             </datalist>
+            {!editingTranscript && transcriptSegments.length ? (
+              <div className="mb-4">
+                <div className="flex h-10 items-center gap-2 rounded-xl border border-border bg-background px-3 text-sm text-muted-foreground transition focus-within:ring-2 focus-within:ring-ring/40">
+                  <Search className="h-4 w-4 shrink-0" aria-hidden />
+                  <input
+                    type="search"
+                    value={transcriptQuery}
+                    onChange={(event) => setTranscriptQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape") setTranscriptQuery("");
+                    }}
+                    placeholder="Buscar na transcrição..."
+                    aria-label="Buscar na transcrição"
+                    className="min-w-0 flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground/70 [&::-webkit-search-cancel-button]:hidden"
+                  />
+                  {transcriptQuery ? (
+                    <button
+                      type="button"
+                      onClick={() => setTranscriptQuery("")}
+                      aria-label="Limpar busca"
+                      className="grid h-6 w-6 place-items-center rounded-md hover:bg-muted hover:text-foreground"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  ) : null}
+                </div>
+                {foldedTranscriptQuery ? (
+                  <div className="mt-2 text-xs text-muted-foreground" aria-live="polite">
+                    {transcriptMatchCount
+                      ? `${transcriptMatchCount} ${transcriptMatchCount === 1 ? "ocorrência" : "ocorrências"} em ${transcriptMatchSegments.length} de ${transcriptSegments.length} trechos`
+                      : "Nada encontrado na transcrição."}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             <div className="space-y-3 text-[15px] leading-relaxed">
               {visibleTranscriptSegments.length ? (
                 visibleTranscriptSegments.map((segment, index) => (
@@ -1224,11 +1323,16 @@ export function Resultado() {
                         className="w-full resize-y rounded-lg border border-input bg-card px-3 py-2 text-sm leading-relaxed outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
                       />
                     ) : (
-                      <p className="m-0 text-[15px]">{segment.text}</p>
+                      <p className="m-0 text-[15px]">
+                        <TranscriptHighlight
+                          text={segment.text}
+                          foldedQuery={foldedTranscriptQuery}
+                        />
+                      </p>
                     )}
                   </div>
                 ))
-              ) : (
+              ) : foldedTranscriptQuery ? null : (
                 <p className="text-sm text-muted-foreground">Transcricao ainda nao disponivel.</p>
               )}
             </div>

@@ -14,6 +14,9 @@ export const protectedPaths = new Set([
   "/assistente",
   "/acessibilidade",
   "/configuracoes",
+  "/calendario",
+  "/perfil",
+  "/ajuda",
 ]);
 
 export function normalizePath(pathname: string) {
@@ -44,6 +47,9 @@ export const screenTitles: Record<string, string> = {
   "/assistente": "Assistente",
   "/acessibilidade": "Acessibilidade",
   "/configuracoes": "Configurações",
+  "/calendario": "Calendário",
+  "/perfil": "Perfil",
+  "/ajuda": "Ajuda",
 };
 
 export function screenTitle(pathname: string) {

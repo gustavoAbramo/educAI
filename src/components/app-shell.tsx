@@ -1,6 +1,8 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Accessibility,
+  CalendarDays,
+  CircleHelp,
   GraduationCap,
   History,
   LayoutDashboard,
@@ -14,6 +16,7 @@ import {
   Settings,
   Sparkles,
   Sun,
+  UserRound,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -25,10 +28,13 @@ import {
   SidebarNav,
   SidebarSearch,
 } from "@/components/ui/dashboard-sidebar";
+import { initials, onAccountChanged } from "@/features/perfil/account-events";
 import { screenTitle } from "@/lib/route-access";
+import { getAccount, type AccountProfile } from "@/services/accountService";
 import { cn } from "@/lib/utils";
 
 const bottomItems: NavItemData[] = [
+  { id: "perfil", title: "Perfil", icon: UserRound, to: "/perfil" },
   { id: "configuracoes", title: "Configurações", icon: Settings, to: "/configuracoes" },
 ];
 
@@ -60,6 +66,21 @@ export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [account, setAccount] = useState<AccountProfile | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getAccount()
+      .then((response) => {
+        if (active) setAccount(response.data);
+      })
+      .catch(() => undefined);
+    const stop = onAccountChanged(setAccount);
+    return () => {
+      active = false;
+      stop();
+    };
+  }, []);
 
   async function signOut() {
     setSigningOut(true);
@@ -108,6 +129,7 @@ export function AppShell() {
           { id: "inicio", title: "Início", icon: LayoutDashboard, to: "/painel" },
           { id: "nova-aula", title: "Nova aula", icon: Mic, to: "/nova-aula" },
           { id: "historico", title: "Histórico", icon: History, to: "/historico" },
+          { id: "calendario", title: "Calendário", icon: CalendarDays, to: "/calendario" },
         ],
       },
       {
@@ -120,6 +142,7 @@ export function AppShell() {
             icon: Accessibility,
             to: "/acessibilidade",
           },
+          { id: "ajuda", title: "Ajuda", icon: CircleHelp, to: "/ajuda" },
         ],
       },
     ],
@@ -261,6 +284,21 @@ export function AppShell() {
                 <Moon className="h-4 w-4" strokeWidth={1.5} />
               )}
             </button>
+          </Tooltip>
+          <Tooltip label={account?.name || account?.email || "Perfil"}>
+            <Link
+              to="/perfil"
+              aria-label="Abrir perfil"
+              className="grid h-8 w-8 place-items-center overflow-hidden rounded-full bg-gradient-brand-soft text-[11px] font-semibold text-primary outline-none ring-offset-background transition focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {account?.avatar ? (
+                <img src={account.avatar} alt="" className="h-full w-full object-cover" />
+              ) : account ? (
+                <span aria-hidden>{initials(account)}</span>
+              ) : (
+                <UserRound className="h-4 w-4" strokeWidth={1.5} aria-hidden />
+              )}
+            </Link>
           </Tooltip>
           <Tooltip label="Sair da conta">
             <button

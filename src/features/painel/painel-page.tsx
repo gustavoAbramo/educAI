@@ -7,11 +7,14 @@ import {
   Mic,
   Radar,
   Sparkles,
+  Star,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatSessionDate, getSessionTypeLabel } from "@/lib/session-format";
+import { formatDuration, isPinned, sessionStats, sessionsPerWeek } from "@/lib/session-stats";
 import { getSessions } from "@/services/sessionService";
 import type { Session } from "@/types/api";
+import { WeeklyChart } from "./weekly-chart";
 
 const highlights = [
   {
@@ -35,6 +38,9 @@ export function Painel() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const stats = useMemo(() => sessionStats(sessions), [sessions]);
+  const weeks = useMemo(() => sessionsPerWeek(sessions, 8), [sessions]);
+  const pinned = useMemo(() => sessions.filter(isPinned), [sessions]);
 
   useEffect(() => {
     let active = true;
@@ -131,35 +137,77 @@ export function Painel() {
         </div>
       </section>
 
-      <section className="mt-8 grid gap-4 sm:grid-cols-3">
-        <div className="rounded-[1.6rem] border border-border/75 bg-card/70 p-5 shadow-soft">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            sessoes
-          </div>
-          <div className="mt-3 text-3xl font-semibold tracking-tight">{sessions.length}</div>
-          <p className="mt-2 text-xs leading-6 text-muted-foreground">
-            Historico pronto para crescer em ciclos de aula, reuniao e mentoria.
-          </p>
+      <section className="mt-8 grid gap-4 lg:grid-cols-[1fr_1.1fr]" aria-label="Estatísticas">
+        <div className="grid grid-cols-2 gap-4">
+          {[
+            { label: "Aulas", value: String(stats.total), hint: "no total" },
+            {
+              label: "Horas gravadas",
+              value: formatDuration(stats.recordedSeconds),
+              hint: "somando todos os áudios",
+            },
+            { label: "Esta semana", value: String(stats.thisWeek), hint: "aulas desde segunda" },
+            { label: "Prontas", value: String(stats.ready), hint: "com materiais gerados" },
+          ].map((tile) => (
+            <div
+              key={tile.label}
+              className="rounded-[1.6rem] border border-border/75 bg-card/70 p-5 shadow-soft"
+            >
+              <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                {tile.label}
+              </div>
+              <div className="mt-3 text-3xl font-semibold tracking-tight tabular-nums">
+                {loading ? "–" : tile.value}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">{tile.hint}</p>
+            </div>
+          ))}
         </div>
 
         <div className="rounded-[1.6rem] border border-border/75 bg-card/70 p-5 shadow-soft">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            assistente
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <h2 className="text-sm font-semibold">Aulas por semana</h2>
+            <span className="text-xs text-muted-foreground">últimas 8 semanas</span>
           </div>
-          <div className="mt-3 text-3xl font-semibold tracking-tight">Hibrido</div>
-          <p className="mt-2 text-xs leading-6 text-muted-foreground">
-            Responde com base local, contexto da aula e busca web quando o assunto exige atualidade.
-          </p>
-        </div>
-
-        <div className="rounded-[1.6rem] border border-border/75 bg-card/70 p-5 shadow-soft">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">saida</div>
-          <div className="mt-3 text-3xl font-semibold tracking-tight">Editorial</div>
-          <p className="mt-2 text-xs leading-6 text-muted-foreground">
-            Materiais com mais hierarquia visual e leitura escaneavel para uso real.
-          </p>
+          <WeeklyChart buckets={weeks} />
         </div>
       </section>
+
+      {pinned.length > 0 ? (
+        <section className="mt-10" aria-labelledby="favoritas-titulo">
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <h2
+                id="favoritas-titulo"
+                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+              >
+                <Star className="h-3.5 w-3.5 fill-current text-amber-500" aria-hidden />
+                Favoritas
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Marque com a estrela no Histórico para fixar aqui.
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {pinned.map((session) => (
+              <Link
+                key={session.id}
+                to="/resultado"
+                search={{ sessionId: session.id } as never}
+                className="group rounded-2xl border border-border/80 bg-card/75 p-4 shadow-soft transition hover:border-primary/30"
+              >
+                <div className="truncate text-sm font-semibold group-hover:text-primary">
+                  {session.title}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {getSessionTypeLabel(session.type)} · {formatSessionDate(session.createdAt)}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="mt-10">
         <div className="mb-4 flex items-end justify-between gap-4">

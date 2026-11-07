@@ -164,7 +164,19 @@ function derivePasswordHash(password: string, salt: Buffer) {
   });
 }
 
-async function verifyPassword(password: string, hash = "") {
+export async function hashPassword(password: string) {
+  const salt = randomBytes(16);
+  const hash = await derivePasswordHash(password, salt);
+  return `scrypt:${salt.toString("hex")}:${hash.toString("hex")}`;
+}
+
+// Cabecalho que apaga o cookie de sessao (usado ao excluir a conta).
+export function clearedSessionCookie(url: URL) {
+  const cookie = cookieOptions(url);
+  return cookie ? sessionCookie(cookie, "") : undefined;
+}
+
+export async function verifyPassword(password: string, hash = "") {
   const [, salt, digest] = hash.split(":");
   const actual = await derivePasswordHash(
     password,
@@ -282,12 +294,10 @@ export async function handleAuthRequest(request: Request, url: URL) {
     if (registering) {
       if (email === config.reservedEmail || (await findAuthAccount(email))) return emailInUse();
 
-      const salt = randomBytes(16);
-      const hash = await derivePasswordHash(password, salt);
       const account = {
         id: randomUUID(),
         email,
-        password_hash: `scrypt:${salt.toString("hex")}:${hash.toString("hex")}`,
+        password_hash: await hashPassword(password),
       };
       if (!(await insertAuthAccount(account))) return emailInUse();
       token = createToken(account.id, config.memberKey);

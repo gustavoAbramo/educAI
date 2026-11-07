@@ -10,6 +10,7 @@ import {
   Plus,
   RotateCcw,
   Search,
+  Star,
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -31,13 +32,15 @@ import {
   formatSessionUpdatedLabel,
   getSessionTypeLabel,
 } from "@/lib/session-format";
+import { formatDuration, isPinned } from "@/lib/session-stats";
 import { cn } from "@/lib/utils";
 import { getSessionMaterials } from "@/services/materialService";
-import { deleteSession, getSessions } from "@/services/sessionService";
-import type { Session, SessionMaterial } from "@/types/api";
+import { deleteSession, getSessions, updateSession } from "@/services/sessionService";
+import type { Session, SessionMaterial, SessionType } from "@/types/api";
 
 const filters = [
   { id: "todas", label: "Todas" },
+  { id: "favoritas", label: "Favoritas" },
   { id: "prontas", label: "Prontas" },
   { id: "transcritas", label: "Transcritas" },
   { id: "falhas", label: "Falhas" },
@@ -45,6 +48,37 @@ const filters = [
 ] as const;
 
 type FilterId = (typeof filters)[number]["id"];
+
+const periods = [
+  { id: "sempre", label: "Qualquer data" },
+  { id: "7d", label: "Últimos 7 dias" },
+  { id: "30d", label: "Últimos 30 dias" },
+  { id: "mes", label: "Este mês" },
+  { id: "ano", label: "Este ano" },
+] as const;
+
+type PeriodId = (typeof periods)[number]["id"];
+
+const sorts = [
+  { id: "recentes", label: "Mais recentes" },
+  { id: "antigas", label: "Mais antigas" },
+  { id: "atualizadas", label: "Atualizadas por último" },
+  { id: "titulo", label: "Título (A–Z)" },
+  { id: "duracao", label: "Maior duração" },
+] as const;
+
+type SortId = (typeof sorts)[number]["id"];
+
+function periodStart(period: PeriodId, now = new Date()) {
+  if (period === "7d") return now.getTime() - 7 * 24 * 60 * 60 * 1000;
+  if (period === "30d") return now.getTime() - 30 * 24 * 60 * 60 * 1000;
+  if (period === "mes") return new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  if (period === "ano") return new Date(now.getFullYear(), 0, 1).getTime();
+  return undefined;
+}
+
+const selectClassName =
+  "h-10 rounded-xl border border-border bg-card px-3 text-xs text-foreground outline-none transition focus:ring-2 focus:ring-ring/40";
 
 function statusLabel(session: Session) {
   const failure = session.failureReason ?? "";
@@ -129,6 +163,10 @@ export function Historico() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<FilterId>("todas");
   const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<SessionType | "todos">("todos");
+  const [period, setPeriod] = useState<PeriodId>("sempre");
+  const [sort, setSort] = useState<SortId>("recentes");
+  const [pinning, setPinning] = useState<string | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [materialPreviews, setMaterialPreviews] = useState<Record<string, string>>({});
   const [previewsLoading, setPreviewsLoading] = useState(false);
@@ -136,6 +174,24 @@ export function Historico() {
   const [error, setError] = useState("");
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const togglePin = async (session: Session) => {
+    const pinned = !isPinned(session);
+    setPinning(session.id);
+    try {
+      const response = await updateSession(session.id, { metadata: { pinned } });
+      setSessions((current) =>
+        current.map((item) =>
+          item.id === session.id ? { ...item, metadata: response.data.metadata } : item,
+        ),
+      );
+      toast.success(pinned ? "Aula marcada como favorita" : "Aula tirada das favoritas");
+    } catch {
+      toast.error("Não foi possível atualizar a favorita");
+    } finally {
+      setPinning(null);
+    }
+  };
 
   const confirmDelete = async () => {
     if (!pendingDelete) return;
@@ -239,6 +295,7 @@ export function Historico() {
   const filterCounts = useMemo(
     () => ({
       todas: sessions.length,
+      favoritas: sessions.filter(isPinned).length,
       prontas: sessions.filter((session) => session.status === "READY").length,
       transcritas: sessions.filter((session) => session.status === "TRANSCRIBED").length,
       falhas: sessions.filter((session) => session.status === "FAILED").length,
@@ -247,14 +304,31 @@ export function Historico() {
     [sessions],
   );
 
+  const sessionTypes = useMemo(
+    () => Array.from(new Set(sessions.map((session) => session.type))),
+    [sessions],
+  );
+
   const list = useMemo(() => {
-    const mapped = sessions.map((session) => {
+    const since = periodStart(period);
+    const scoped = sessions.filter(
+      (session) =>
+        (typeFilter === "todos" || session.type === typeFilter) &&
+        (since === undefined || new Date(session.createdAt).getTime() >= since),
+    );
+
+    const mapped = scoped.map((session) => {
       const meta = metadataText(session);
       const preview = materialPreviews[session.id] || "";
       const subject = getSessionTypeLabel(session.type);
 
       return {
         id: session.id,
+        session,
+        pinned: isPinned(session),
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt,
+        durationSeconds: session.durationSeconds ?? 0,
         title: session.title,
         subject,
         className: session.language,
@@ -286,6 +360,7 @@ export function Historico() {
     });
 
     let arr = [...mapped];
+    if (filter === "favoritas") arr = arr.filter((item) => item.pinned);
     if (filter === "prontas") arr = arr.filter((item) => item.status === "READY");
     if (filter === "transcritas") arr = arr.filter((item) => item.status === "TRANSCRIBED");
     if (filter === "falhas") arr = arr.filter((item) => item.status === "FAILED");
@@ -296,8 +371,18 @@ export function Historico() {
       arr = arr.filter((item) => item.searchText.toLowerCase().includes(q));
     }
 
+    arr.sort((a, b) => {
+      if (sort === "antigas") return a.createdAt.localeCompare(b.createdAt);
+      if (sort === "atualizadas") return b.updatedAt.localeCompare(a.updatedAt);
+      if (sort === "titulo") return a.title.localeCompare(b.title, "pt-BR");
+      if (sort === "duracao") return b.durationSeconds - a.durationSeconds;
+      return b.createdAt.localeCompare(a.createdAt);
+    });
+
     return arr;
-  }, [filter, materialPreviews, query, sessions]);
+  }, [filter, materialPreviews, period, query, sessions, sort, typeFilter]);
+
+  const hasExtraFilters = typeFilter !== "todos" || period !== "sempre" || sort !== "recentes";
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8 sm:py-10 animate-fade-in">
@@ -380,7 +465,62 @@ export function Historico() {
             className="flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground/70"
           />
         </div>
-        <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex flex-wrap gap-2">
+          <select
+            aria-label="Filtrar por tipo de sessão"
+            value={typeFilter}
+            onChange={(event) => setTypeFilter(event.target.value as SessionType | "todos")}
+            className={selectClassName}
+          >
+            <option value="todos">Todos os tipos</option>
+            {sessionTypes.map((type) => (
+              <option key={type} value={type}>
+                {getSessionTypeLabel(type)}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Filtrar por data"
+            value={period}
+            onChange={(event) => setPeriod(event.target.value as PeriodId)}
+            className={selectClassName}
+          >
+            {periods.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Ordenar sessões"
+            value={sort}
+            onChange={(event) => setSort(event.target.value as SortId)}
+            className={selectClassName}
+          >
+            {sorts.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+          {hasExtraFilters ? (
+            <button
+              type="button"
+              onClick={() => {
+                setTypeFilter("todos");
+                setPeriod("sempre");
+                setSort("recentes");
+              }}
+              className="inline-flex h-10 items-center rounded-xl px-3 text-xs text-muted-foreground transition hover:text-foreground"
+            >
+              Limpar
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mb-5 overflow-x-auto pb-1">
+        <div className="flex gap-1.5">
           {stats.failed > 0 ? (
             <button
               type="button"
@@ -471,7 +611,29 @@ export function Historico() {
                     {item.subject} · {item.date} · {item.duration}
                   </div>
                 </Link>
-                <StatusBadge variant={item.variant} label={item.label} />
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void togglePin(item.session)}
+                    disabled={pinning === item.id}
+                    aria-pressed={item.pinned}
+                    aria-label={
+                      item.pinned
+                        ? `Tirar ${item.title} das favoritas`
+                        : `Marcar ${item.title} como favorita`
+                    }
+                    title={item.pinned ? "Tirar das favoritas" : "Marcar como favorita"}
+                    className={cn(
+                      "grid h-8 w-8 place-items-center rounded-lg transition hover:bg-muted disabled:opacity-50",
+                      item.pinned
+                        ? "text-amber-500"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <Star className={cn("h-4 w-4", item.pinned && "fill-current")} />
+                  </button>
+                  <StatusBadge variant={item.variant} label={item.label} />
+                </div>
               </div>
 
               <Link to={item.target} search={{ sessionId: item.id } as never} className="block">
@@ -497,6 +659,11 @@ export function Historico() {
                 <span className="rounded-full border border-border bg-background px-2 py-0.5">
                   {item.audioCount} áudio(s)
                 </span>
+                {item.durationSeconds > 0 ? (
+                  <span className="rounded-full border border-border bg-background px-2 py-0.5">
+                    {formatDuration(item.durationSeconds)}
+                  </span>
+                ) : null}
                 <span className="rounded-full border border-border bg-background px-2 py-0.5">
                   {item.hasTranscript ? "Transcrição" : "Sem transcrição"}
                 </span>

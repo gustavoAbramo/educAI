@@ -536,6 +536,23 @@ function requireSession(sessionId: string | undefined, ownerId?: string): Sessio
   return record;
 }
 
+// Tempo gravado da sessao: soma das gravacoes; sem essa informacao, usa o
+// fim do ultimo trecho da transcricao.
+function recordedSeconds(record: SessionRecord) {
+  const fromRecordings = record.recordings.reduce(
+    (total, recording) =>
+      total + (Number.isFinite(recording.durationSeconds) ? (recording.durationSeconds ?? 0) : 0),
+    0,
+  );
+  if (fromRecordings > 0) return Math.round(fromRecordings);
+
+  const lastEndMs = record.transcript?.segments.reduce(
+    (max, segment) => Math.max(max, Number.isFinite(segment.endMs) ? segment.endMs : 0),
+    0,
+  );
+  return lastEndMs ? Math.round(lastEndMs / 1000) : 0;
+}
+
 function sessionStatus(record: SessionRecord) {
   return record.status;
 }
@@ -549,6 +566,7 @@ async function handleSessions(request: Request, route: RouteMatch, ownerId?: str
         data: listVoiceSessions(ownerId).map((record) => ({
           ...record.session,
           audioCount: record.recordings.length,
+          durationSeconds: recordedSeconds(record),
           hasTranscript: Boolean(record.transcript),
           hasMaterials: Boolean(record.materials),
         })),

@@ -71,6 +71,7 @@ export type Session = {
   completedAt?: string;
   failureReason?: string;
   audioCount?: number;
+  durationSeconds?: number;
   hasTranscript?: boolean;
   hasMaterials?: boolean;
 };
