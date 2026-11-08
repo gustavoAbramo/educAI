@@ -22,6 +22,12 @@ dist-ssr
 .env.*
 !.env.example
 
+# Pastas de ambiente: nunca enviar para o GitHub
+env/
+.env/
+**/env/
+**/.env/
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

@@ -1,10 +1,32 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Mic, ArrowRight, ChevronDown, Settings2 } from "lucide-react";
-import { useState } from "react";
+import {
+  Mic,
+  ArrowRight,
+  ChevronDown,
+  FileAudio,
+  FileVideo,
+  Settings2,
+  UploadCloud,
+  X,
+} from "lucide-react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { BackButton } from "@/components/back-button";
+import { uploadSessionAudio } from "@/services/audioService";
 import { createSession } from "@/services/sessionService";
 import type { SessionType } from "@/types/api";
+import {
+  formatFileSize,
+  formatMediaDuration,
+  MAX_MEDIA_UPLOAD_BYTES,
+  mediaFileProblem,
+  mediaKindOf,
+  mimeTypeForMedia,
+  PROVIDER_SAFE_MEDIA_BYTES,
+  readMediaDuration,
+  titleFromFileName,
+  type MediaKind,
+} from "./model/media-file";
 
 const inputCls =
   "w-full rounded-lg border border-input bg-card px-3 h-10 text-sm outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring/60 transition placeholder:text-muted-foreground/60";
@@ -93,6 +115,53 @@ export function NovaAula() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaKind, setMediaKind] = useState<MediaKind>("audio");
+  const [mediaDuration, setMediaDuration] = useState<number | undefined>();
+  const [mediaError, setMediaError] = useState("");
+  const [draggingMedia, setDraggingMedia] = useState(false);
+  // Guarda a sessao ja criada quando so o envio do arquivo falhou, para o
+  // "tentar novamente" nao duplicar a sessao no historico.
+  const [createdSession, setCreatedSession] = useState<{ id: string; formKey: string } | null>(
+    null,
+  );
+  const mediaInputRef = useRef<HTMLInputElement>(null);
+  const mediaSelectionRef = useRef(0);
+
+  const pickMedia = async (file: File | undefined) => {
+    if (!file) return;
+
+    const problem = mediaFileProblem(file);
+    if (problem) {
+      setMediaError(problem);
+      return;
+    }
+
+    const selection = mediaSelectionRef.current + 1;
+    mediaSelectionRef.current = selection;
+    const kind = mediaKindOf(file);
+
+    setMediaError("");
+    setMediaFile(file);
+    setMediaKind(kind);
+    setMediaDuration(undefined);
+    setCreatedSession(null);
+
+    if (!title.trim()) setTitle(titleFromFileName(file.name));
+
+    const duration = await readMediaDuration(file, kind);
+    if (selection === mediaSelectionRef.current) setMediaDuration(duration);
+  };
+
+  const clearMedia = () => {
+    mediaSelectionRef.current += 1;
+    setMediaFile(null);
+    setMediaKind("audio");
+    setMediaDuration(undefined);
+    setMediaError("");
+    setCreatedSession(null);
+    if (mediaInputRef.current) mediaInputRef.current.value = "";
+  };
 
   const typeMap: Record<string, SessionType> = {
     Aula: "CLASS",
@@ -123,6 +192,15 @@ export function NovaAula() {
       return;
     }
 
+    if (mediaFile) {
+      const problem = mediaFileProblem(mediaFile);
+      if (problem) {
+        setMediaError(problem);
+        setSubmitError("O arquivo escolhido precisa ser corrigido antes de continuar.");
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setSubmitError("");
 
@@ -142,18 +220,74 @@ export function NovaAula() {
         sessionFormat,
         previousTasks: previousTasks.trim(),
         aiInstructions: aiInstructions.trim(),
+        inputMode: mediaFile ? "upload" : "live",
+        ...(mediaFile
+          ? {
+              uploadedMedia: {
+                fileName: mediaFile.name,
+                mediaKind,
+                sizeBytes: mediaFile.size,
+                durationSeconds: mediaDuration,
+              },
+            }
+          : {}),
       });
-
-      const response = await createSession({
-        title: trimmedTitle,
-        type: sessionType,
+      const summaryTemplate = summaryStyle || undefined;
+      const formKey = JSON.stringify([
+        trimmedTitle,
+        sessionType,
         language,
-        summaryTemplate: summaryStyle || undefined,
+        summaryTemplate,
         metadata,
-      });
+        mediaFile ? `${mediaFile.name}:${mediaFile.size}:${mediaFile.lastModified}` : "",
+      ]);
+
+      let sessionId = createdSession && createdSession.formKey === formKey ? createdSession.id : "";
+
+      if (!sessionId) {
+        const response = await createSession({
+          title: trimmedTitle,
+          type: sessionType,
+          language,
+          summaryTemplate,
+          metadata,
+        });
+        sessionId = response.data.id;
+        setCreatedSession({ id: sessionId, formKey });
+      }
+
+      if (mediaFile) {
+        try {
+          await uploadSessionAudio(sessionId, mediaFile, {
+            source: "UPLOAD",
+            fileName: mediaFile.name,
+            mimeType: mimeTypeForMedia(mediaFile),
+            durationSeconds: mediaDuration ? Math.max(1, Math.round(mediaDuration)) : undefined,
+            metadata: {
+              sourceTrack: "upload",
+              mediaKind,
+              originalFileName: mediaFile.name,
+              ...(mediaDuration ? { durationSeconds: Math.round(mediaDuration) } : {}),
+            },
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Falha ao enviar o arquivo.";
+          setSubmitError(
+            `A sessão foi criada, mas o arquivo não foi enviado: ${message} Tente novamente.`,
+          );
+          toast.error("Falha no envio do arquivo", { description: message });
+          return;
+        }
+
+        toast.success("Arquivo enviado", {
+          description: "Transcrevendo e gerando os materiais...",
+        });
+        navigate({ to: "/processando", search: { sessionId } as never });
+        return;
+      }
 
       toast.success("Sessão criada com sucesso");
-      navigate({ to: "/aula", search: { sessionId: response.data.id } as never });
+      navigate({ to: "/aula", search: { sessionId } as never });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Falha ao criar sessão.";
       setSubmitError(message);
@@ -182,6 +316,108 @@ export function NovaAula() {
       </div>
 
       <div className="space-y-4">
+        <section className="rounded-2xl border border-border/70 bg-card/40 backdrop-blur-sm shadow-soft p-5">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/10">
+              <UploadCloud className="h-4 w-4 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium">Já tem o áudio ou vídeo da aula?</div>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Envie um arquivo pronto em vez de gravar agora. A transcrição e os materiais são
+                gerados automaticamente.
+              </p>
+            </div>
+          </div>
+
+          <input
+            ref={mediaInputRef}
+            type="file"
+            aria-label="Escolher áudio ou vídeo"
+            className="hidden"
+            accept="audio/*,video/*,.mp3,.m4a,.aac,.wav,.ogg,.opus,.flac,.webm,.mp4,.m4v,.mov,.mkv,.avi,.mpeg,.mpg"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              void pickMedia(file);
+            }}
+          />
+
+          {mediaFile ? (
+            <div className="mt-4 flex items-center gap-3 rounded-xl border border-border bg-background/60 px-3 py-2.5">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-muted">
+                {mediaKind === "video" ? (
+                  <FileVideo className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <FileAudio className="h-4 w-4 text-muted-foreground" />
+                )}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">{mediaFile.name}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {mediaKind === "video" ? "Vídeo" : "Áudio"} · {formatFileSize(mediaFile.size)}
+                  {mediaDuration ? ` · ${formatMediaDuration(mediaDuration)}` : ""}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => mediaInputRef.current?.click()}
+                className="h-8 shrink-0 rounded-lg border border-border px-2.5 text-[11px] font-medium transition hover:bg-muted"
+              >
+                Trocar
+              </button>
+              <button
+                type="button"
+                onClick={clearMedia}
+                aria-label="Remover arquivo"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => mediaInputRef.current?.click()}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDraggingMedia(true);
+              }}
+              onDragLeave={() => setDraggingMedia(false)}
+              onDrop={(event) => {
+                event.preventDefault();
+                setDraggingMedia(false);
+                void pickMedia(event.dataTransfer.files?.[0]);
+              }}
+              className={`mt-4 flex w-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-6 text-center transition ${
+                draggingMedia
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-background/40 hover:border-primary/40 hover:bg-accent/30"
+              }`}
+            >
+              <UploadCloud className="h-5 w-5 text-muted-foreground" />
+              <span className="text-sm font-medium">Escolher arquivo</span>
+              <span className="text-[11px] text-muted-foreground">
+                ou arraste aqui · até {formatFileSize(MAX_MEDIA_UPLOAD_BYTES)}
+              </span>
+            </button>
+          )}
+
+          {mediaError ? <p className="mt-2 text-xs text-destructive">{mediaError}</p> : null}
+
+          {mediaFile && mediaFile.size > PROVIDER_SAFE_MEDIA_BYTES ? (
+            <div className="mt-2 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
+              Arquivos acima de {formatFileSize(PROVIDER_SAFE_MEDIA_BYTES)} podem exceder o limite
+              do provedor de IA. Para aulas longas, envie apenas o áudio.
+            </div>
+          ) : null}
+
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            Áudio (mp3, m4a, wav, ogg, webm) ou vídeo (mp4, mov, mkv). Arquivos grandes podem
+            demorar; o áudio costuma ser mais rápido.
+          </p>
+        </section>
+
         <section className="rounded-2xl border border-border/70 bg-card/40 backdrop-blur-sm shadow-soft p-5 space-y-4">
           <label className="block">
             <span className={labelCls}>Título</span>
@@ -351,7 +587,9 @@ export function NovaAula() {
 
         <div className="pt-3 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="text-[11px] text-muted-foreground">
-            O microfone será solicitado ao iniciar.
+            {mediaFile
+              ? "O arquivo será enviado e processado automaticamente."
+              : "O microfone será solicitado ao iniciar."}
           </div>
           <div className="flex flex-col items-end gap-2">
             {submitError ? <p className="text-xs text-destructive">{submitError}</p> : null}
@@ -360,8 +598,14 @@ export function NovaAula() {
               disabled={isSubmitting}
               className="group inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-brand text-white px-5 h-11 text-sm font-medium shadow-glow hover:opacity-95 active:scale-[0.98] transition disabled:opacity-70"
             >
-              <Mic className="h-4 w-4" />
-              {isSubmitting ? "Criando..." : "Iniciar sessão"}
+              {mediaFile ? <UploadCloud className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              {isSubmitting
+                ? mediaFile
+                  ? "Enviando..."
+                  : "Criando..."
+                : mediaFile
+                  ? "Enviar e processar"
+                  : "Iniciar sessão"}
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </button>
           </div>
