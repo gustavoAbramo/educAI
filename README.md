@@ -443,18 +443,16 @@ Apagar a pasta `.data/` zera o app. Para sincronizar sessões com o Supabase, ve
       <sub>Desenvolvimento</sub>
     </td>
     <td align="center" width="200">
-      <a href="https://github.com/gustavoAbramo/educAI/graphs/contributors">
-        <img src="https://github.com/identicons/ruan.png" width="96" height="96" alt="Ruan" />
+      <a href="https://github.com/Ruuan0liveira">
+        <img src="https://github.com/Ruuan0liveira.png?size=200" width="96" height="96" alt="Ruan P. M. de Oliveira" />
         <br />
-        <sub><b>Ruan</b></sub>
+        <sub><b>Ruan Oliveira</b></sub>
       </a>
       <br />
       <sub>Desenvolvimento</sub>
     </td>
   </tr>
 </table>
-
-<!-- TODO: substituir o placeholder acima pelo avatar real do Ruan quando o perfil do GitHub for confirmado. -->
 
 ---
 
